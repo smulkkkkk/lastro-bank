@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: core-bank
+  datasource:
+    url: ${CORE_DB_URL:jdbc:postgresql://localhost:5433/lastro}
+    username: ${CORE_DB_USER:lastro_core}
+    password: ${CORE_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+  flyway:
+    default-schema: core
+    create-schemas: true
+  jackson:
+    deserialization:
+      # 10.9 em campo de centavos é erro, não 10
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${CORE_PORT:8080}
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+lastro:
+  security:
+    issuer: lastro-core
+    audience: lastro
+    access-token-ttl: 15m
+    refresh-token-ttl: 14d
+    # PEM PKCS#8. Sem ela a aplicação só sobe se allow-generated-key for true.
+    private-key-pem: ${LASTRO_JWT_PRIVATE_KEY:}
+    allow-generated-key: false
+    allowed-origins: ${LASTRO_ALLOWED_ORIGINS:http://localhost:5173}

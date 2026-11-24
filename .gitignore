@@ -1,0 +1,17 @@
+target/
+node_modules/
+dist/
+bin/
+.local/
+.env
+.env.*
+!.env.example
+*.pem
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.classpath
+.project
+.settings/
+.claude/settings.local.json
