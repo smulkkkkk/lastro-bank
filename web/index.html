@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Lastro, banco digital de demonstração em Java, Go, PostgreSQL e React." />
+    <meta name="theme-color" content="#12161A" />
+    <link rel="icon" type="image/svg+xml" href="/icone.svg" />
+    <title>Lastro</title>
+    <script>
+      // Antes da primeira pintura, para o tema não piscar.
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('lastro-tema') || 'dark'
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

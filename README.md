@@ -3,7 +3,7 @@
 Banco digital de demonstração em **Java**, **Go**, **PostgreSQL** e **React**. Todo o dinheiro é
 fictício.
 
-> Em construção. A etapa 1 (base do `core-bank`) está pronta; o andamento está no fim da página.
+> Em construção: a base do `core-bank` e o site já funcionam. O andamento está no fim da página.
 
 ## O que já funciona
 
@@ -19,7 +19,12 @@ fictício.
 
 ## Rodar
 
-Precisa só do JDK 25. O PostgreSQL vem embutido, sem Docker.
+Precisa do JDK 25 e do Node 22.12 ou mais novo. O PostgreSQL vem embutido, sem Docker.
+
+No Windows, dê dois cliques em `iniciar.cmd`: ele sobe a API e o site e abre
+`http://localhost:5173`.
+
+Para rodar só a API e os testes dela:
 
 ```powershell
 cd core-bank
@@ -46,7 +51,7 @@ A API sobe em `http://localhost:8080`.
 - [x] 1. Base: banco, login, contas, depósito e extrato
 - [ ] 2. Transferências
 - [ ] 3. Sentinel: antifraude e notificações em Go
-- [ ] 4. Site em React
+- [ ] 4. Site em React (pronto: página inicial, cadastro, login, painel, depósito e extrato; falta transferir)
 - [ ] 5. Cofrinhos, cartões e agendamentos
 - [ ] 6. Backoffice
 - [ ] 7. Docker, CI, métricas e publicação
