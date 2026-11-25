@@ -11,8 +11,10 @@ import { AppShell } from './pages/AppShell'
 import { Cards } from './pages/Cards'
 import { Dashboard } from './pages/Dashboard'
 import { Landing } from './pages/Landing'
+import { Pix } from './pages/Pix'
 import { Profile } from './pages/Profile'
 import { Statement } from './pages/Statement'
+import { Vaults } from './pages/Vaults'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -25,7 +27,9 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/criar-conta" element={<Register />} />
             <Route path="/app" element={<AppShell />}>
               <Route index element={<Dashboard />} />
+              <Route path="pix" element={<Pix />} />
               <Route path="cartoes" element={<Cards />} />
+              <Route path="caixinhas" element={<Vaults />} />
               <Route path="extrato" element={<Statement />} />
               <Route path="conta" element={<Profile />} />
             </Route>

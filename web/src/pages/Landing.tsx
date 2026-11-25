@@ -99,8 +99,8 @@ export function Landing() {
           <div>
             <h2>Este é o Lino</h2>
             <p>
-              Abra uma conta em um minuto e receba R$ 1.000,00 fictícios. O Lino vai inflar conforme você guarda
-              dinheiro. Toque nele para ver.
+              Abra uma conta em um minuto e receba R$ 1.000,00 fictícios. O Lino infla conforme você guarda
+              dinheiro nas caixinhas. Toque nele para ver.
             </p>
             <Link className="button large" to={inside ? '/app' : '/criar-conta'}>
               {inside ? 'Abrir conta' : 'Criar conta'}

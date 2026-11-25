@@ -6,8 +6,8 @@ import { messageOf, useSession } from '../lib/session'
 import { useBank } from './AppShell'
 
 const NEXT = [
-  { title: 'Pix, boleto e recarga', items: 'Transferências, contas fictícias e o Rastro do dinheiro.' },
-  { title: 'Crédito, caixinhas e empréstimo', items: 'Fatura, rendimento em % do CDI e simulação de parcelas.' },
+  { title: 'Boleto, recarga e compras', items: 'Contas fictícias e histórico por cartão.' },
+  { title: 'Crédito e empréstimo', items: 'Limite, fatura, conversão em débito e simulação de parcelas.' },
   { title: 'Investimentos e notícias', items: 'Bitcoin, moedas e cotações públicas, com dinheiro fictício.' },
   { title: 'Antifraude e suporte', items: 'Análise em Go, chat com o Lino e atendimento no WhatsApp.' },
   { title: 'Bolhas e parceiros', items: 'Moeda do app, descontos, outros bancos e aproximação simulada.' },

@@ -17,6 +17,8 @@ export const useBank = () => useOutletContext<BankContext>()
 
 const ICONS = {
   home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
+  pix: 'M4 9h14l-4-4M20 15H6l4 4',
+  vaults: 'M4 5v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5M4 11c3-2 5-2 8 0s5 2 8 0',
   cards: 'M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10.500h18',
   statement: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9.500 8h5M9.500 12h5',
   profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.500 21a7.500 7.500 0 0 1 15 0',
@@ -24,7 +26,9 @@ const ICONS = {
 
 const PLACES = [
   { to: '/app', label: 'Início', icon: ICONS.home },
+  { to: '/app/pix', label: 'Pix', icon: ICONS.pix },
   { to: '/app/cartoes', label: 'Cartões', icon: ICONS.cards },
+  { to: '/app/caixinhas', label: 'Caixinhas', icon: ICONS.vaults },
   { to: '/app/extrato', label: 'Extrato', icon: ICONS.statement },
   { to: '/app/conta', label: 'Conta', icon: ICONS.profile },
 ]
@@ -56,7 +60,14 @@ export function AppShell() {
   }, [])
 
   useEffect(() => {
-    if (session.status === 'in') void reload()
+    if (session.status !== 'in') return
+    void reload()
+    // Um Pix pode ter chegado enquanto a aba estava escondida.
+    const refresh = () => {
+      if (!document.hidden) void reload()
+    }
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
   }, [session.status, reload])
 
   if (session.status === 'out') return <Navigate to="/entrar" replace />
@@ -75,7 +86,7 @@ export function AppShell() {
       <nav className="app-nav" aria-label="Principal">
         <Brand to="/app" />
         {PLACES.map((place) => (
-          <NavLink key={place.to} to={place.to} end={place.to === '/app'}>
+          <NavLink key={place.to} to={place.to} end={place.to === '/app'} data-place={place.to.split('/').pop()}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d={place.icon} />
             </svg>

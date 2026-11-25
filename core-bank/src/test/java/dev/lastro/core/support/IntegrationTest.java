@@ -16,9 +16,14 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -31,6 +36,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(IntegrationTest.ClockOverride.class)
 public abstract class IntegrationTest {
 
     protected static final String PASSWORD = "senha-forte-123";
@@ -40,11 +46,27 @@ public abstract class IntegrationTest {
     @Autowired protected JdbcClient jdbc;
     @Autowired protected TransactionTemplate transaction;
     @Autowired protected JsonMapper json;
+    @Autowired protected TestClock clock;
+
+    @TestConfiguration
+    static class ClockOverride {
+        @Bean
+        @Primary
+        TestClock testClock() {
+            return new TestClock();
+        }
+    }
+
+    @BeforeEach
+    void resetClock() {
+        clock.reset();
+    }
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> LocalPostgres.url(POSTGRES));
         registry.add("lastro.security.allow-generated-key", () -> "true");
+        registry.add("lastro.cdi.schedule", () -> "false");
         registry.add("logging.structured.format.console", () -> "");
     }
 

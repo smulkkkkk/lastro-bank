@@ -3,8 +3,11 @@ package dev.lastro.core.ledger;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Um lado de um lançamento. Crédito aumenta o saldo da conta, débito diminui. */
-public record Posting(UUID accountId, Direction direction, long amountCents) {
+/**
+ * Um lado de um lançamento. Crédito aumenta o saldo da conta, débito diminui. A descrição é o texto
+ * que aparece no extrato daquela conta; nula, vale a da transação.
+ */
+public record Posting(UUID accountId, Direction direction, long amountCents, String description) {
 
     public enum Direction { DEBIT, CREDIT }
 
@@ -17,10 +20,18 @@ public record Posting(UUID accountId, Direction direction, long amountCents) {
     }
 
     public static Posting debit(UUID accountId, long amountCents) {
-        return new Posting(accountId, Direction.DEBIT, amountCents);
+        return debit(accountId, amountCents, null);
+    }
+
+    public static Posting debit(UUID accountId, long amountCents, String description) {
+        return new Posting(accountId, Direction.DEBIT, amountCents, description);
     }
 
     public static Posting credit(UUID accountId, long amountCents) {
-        return new Posting(accountId, Direction.CREDIT, amountCents);
+        return credit(accountId, amountCents, null);
+    }
+
+    public static Posting credit(UUID accountId, long amountCents, String description) {
+        return new Posting(accountId, Direction.CREDIT, amountCents, description);
     }
 }

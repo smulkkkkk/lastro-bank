@@ -19,6 +19,13 @@ class AccountRepository {
             long amountCents, long balanceAfterCents, OffsetDateTime createdAt) {
     }
 
+    record TracePart(long entryId, String kind, String description, OffsetDateTime createdAt,
+            long amountCents, long partCents) {
+    }
+
+    record TracedEntry(String direction, long amountCents) {
+    }
+
     record PostedDeposit(UUID transactionId, long amountCents) {
     }
 
@@ -42,12 +49,20 @@ class AccountRepository {
         return jdbc.sql("SELECT nextval('core.account_number_seq')").query(Long.class).single();
     }
 
-    void insertChecking(UUID id, UUID ownerId, String number) {
-        jdbc.sql("INSERT INTO core.account (id, owner_id, kind, number) VALUES (:id, :owner, 'CHECKING', :number)")
+    void insert(UUID id, UUID ownerId, String kind, String number) {
+        jdbc.sql("INSERT INTO core.account (id, owner_id, kind, number) VALUES (:id, :owner, :kind, :number)")
                 .param("id", id)
                 .param("owner", ownerId)
+                .param("kind", kind)
                 .param("number", number)
                 .update();
+    }
+
+    UUID checkingId(UUID ownerId) {
+        return jdbc.sql("SELECT id FROM core.account WHERE owner_id = :owner AND kind = 'CHECKING'")
+                .param("owner", ownerId)
+                .query(UUID.class)
+                .single();
     }
 
     List<Account> findByOwner(UUID ownerId) {
@@ -89,6 +104,23 @@ class AccountRepository {
                 .param("account", accountId)
                 .query(Long.class)
                 .single();
+    }
+
+    Optional<TracedEntry> findEntry(UUID accountId, long entryId) {
+        return jdbc.sql("SELECT direction, amount_cents FROM core.ledger_entry WHERE id = :id AND account_id = :account")
+                .param("id", entryId)
+                .param("account", accountId)
+                .query((rs, n) -> new TracedEntry(rs.getString("direction"), rs.getLong("amount_cents")))
+                .optional();
+    }
+
+    List<TracePart> trace(long entryId) {
+        return jdbc.sql("SELECT * FROM core.trace_entry(:id)")
+                .param("id", entryId)
+                .query((rs, n) -> new TracePart(rs.getLong("entry_id"), rs.getString("kind"),
+                        rs.getString("description"), rs.getObject("created_at", OffsetDateTime.class),
+                        rs.getLong("amount_cents"), rs.getLong("part_cents")))
+                .list();
     }
 
     List<StatementLine> statement(UUID accountId, OffsetDateTime from, OffsetDateTime to, String kind,

@@ -28,12 +28,12 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Trocar cartões em 3D | Carteira com arrasto e inclinação | 4 ✅ |
 | Ver ou esconder o dinheiro | Botão de olho em todas as telas | 4 ✅ |
 | Débito e bloqueio de cartão | Cartões na API | 4 ✅ |
-| Pix | Chaves e transferências internas, sem ligação com o Pix real | 5 |
+| Pix | Chaves e transferências internas, sem ligação com o Pix real | 5 ✅ |
 | Boleto e recarga | Contas fictícias pagas pelo razão | 5 |
 | Histórico de compras | Compras simuladas no cartão, extrato por cartão | 5 |
-| Rastro | Consulta sobre o razão | 5 |
+| Rastro | Consulta sobre o razão | 5 ✅ |
 | Crédito e conversão de limite em débito | Limite, fatura e conversão com taxa exibida antes | 6 |
-| Caixinhas com % do CDI | CDI público do Banco Central, rendimento diário no razão | 6 |
+| Caixinhas com % do CDI | CDI público do Banco Central, rendimento diário no razão | 6 ✅ |
 | Empréstimo | Simulação com parcelas e custo total, dinheiro fictício | 6 |
 | Investir, bitcoin e moedas | Cotações públicas, compra e venda simuladas | 7 |
 | Notícias | Feed de fonte pública, sempre com link para a origem | 7 |
@@ -44,6 +44,21 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Conectar outros bancos | Open Finance simulado, com consentimento e revogação | 10 |
 | Aproximação por celular e relógio | Simulação animada | 10 |
 | Imagens para o GitHub | Capturas geradas por script | 4 ✅ |
+
+## Pix até o antifraude existir
+
+A especificação base exige análise antes de aprovar. Como o serviço em Go vem só na etapa 8, até lá o
+Pix é liquidado na hora, protegido por saldo, limite diário de R$ 5.000,00 e noturno de R$ 2.000,00.
+A etapa 8 coloca a reserva e a análise no meio do caminho.
+
+## Como a caixinha rende
+
+- A taxa diária vem da API pública do Banco Central (série 12). Resposta fora do formato é recusada.
+- Rende o saldo do fim de cada dia útil. Fim de semana e feriado não têm taxa, então não rendem.
+- A fração de centavo é guardada e somada no dia seguinte.
+- Banco Central fora do ar não muda nada: os dias que faltarem são pagos quando a taxa chegar.
+- Livre paga 100% do CDI. Trancada paga 110% e só resgata na data, de 30 dias a 5 anos.
+- Impostos (IR e IOF) não são simulados, e a tela avisa.
 
 ## Limites honestos
 

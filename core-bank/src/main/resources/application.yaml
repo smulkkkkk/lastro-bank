@@ -36,6 +36,9 @@ logging:
       console: ecs
 
 lastro:
+  cdi:
+    # Busca o CDI no Banco Central e paga o rendimento das caixinhas
+    schedule: ${LASTRO_CDI_SCHEDULE:true}
   security:
     issuer: lastro-core
     audience: lastro

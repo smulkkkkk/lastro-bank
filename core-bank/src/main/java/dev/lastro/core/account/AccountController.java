@@ -3,6 +3,7 @@ package dev.lastro.core.account;
 import dev.lastro.core.account.AccountRepository.Account;
 import dev.lastro.core.account.AccountRepository.PostedDeposit;
 import dev.lastro.core.account.AccountService.Page;
+import dev.lastro.core.account.AccountService.Trace;
 import dev.lastro.core.ledger.LedgerService.Kind;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -64,6 +65,11 @@ class AccountController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
             @AuthenticationPrincipal Jwt user) {
         return accounts.statement(id, ownerId(user), from, to, kind, before, limit);
+    }
+
+    @GetMapping("/{id}/entries/{entryId}/trace")
+    Trace trace(@PathVariable UUID id, @PathVariable long entryId, @AuthenticationPrincipal Jwt user) {
+        return accounts.trace(id, ownerId(user), entryId);
     }
 
     private static UUID ownerId(Jwt user) {

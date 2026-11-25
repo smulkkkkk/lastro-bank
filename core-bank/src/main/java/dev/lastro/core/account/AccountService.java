@@ -3,6 +3,8 @@ package dev.lastro.core.account;
 import dev.lastro.core.account.AccountRepository.Account;
 import dev.lastro.core.account.AccountRepository.PostedDeposit;
 import dev.lastro.core.account.AccountRepository.StatementLine;
+import dev.lastro.core.account.AccountRepository.TracePart;
+import dev.lastro.core.account.AccountRepository.TracedEntry;
 import dev.lastro.core.card.CardService;
 import dev.lastro.core.ledger.LedgerService;
 import dev.lastro.core.ledger.LedgerService.Kind;
@@ -25,6 +27,9 @@ public class AccountService {
     record Page(List<StatementLine> items, Long nextCursor) {
     }
 
+    record Trace(String direction, long amountCents, long remainingCents, List<TracePart> items) {
+    }
+
     private final AccountRepository accounts;
     private final LedgerService ledger;
     private final CardService cards;
@@ -39,11 +44,23 @@ public class AccountService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void openChecking(UUID ownerId) {
         UUID accountId = UUID.randomUUID();
-        accounts.insertChecking(accountId, ownerId, AccountNumber.format(accounts.nextNumber()));
+        accounts.insert(accountId, ownerId, "CHECKING", AccountNumber.format(accounts.nextNumber()));
         cards.issueFor(accountId);
         ledger.post(Kind.WELCOME, "Saldo de boas-vindas", "welcome:" + accountId, List.of(
                 Posting.debit(LedgerService.FUNDING_ACCOUNT, WELCOME_CENTS),
                 Posting.credit(accountId, WELCOME_CENTS)));
+    }
+
+    /** Conta vazia para uma caixinha; quem chama grava o resto na mesma transação. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public UUID openVault(UUID ownerId) {
+        UUID accountId = UUID.randomUUID();
+        accounts.insert(accountId, ownerId, "VAULT", AccountNumber.format(accounts.nextNumber()));
+        return accountId;
+    }
+
+    public UUID checkingId(UUID ownerId) {
+        return accounts.checkingId(ownerId);
     }
 
     List<Account> list(UUID ownerId) {
@@ -80,6 +97,16 @@ public class AccountService {
                 Posting.debit(LedgerService.FUNDING_ACCOUNT, amountCents),
                 Posting.credit(accountId, amountCents)));
         return new PostedDeposit(transactionId, amountCents);
+    }
+
+    /** Rastro: de onde veio uma saída, ou para onde foi uma entrada e quanto dela ainda está na conta. */
+    Trace trace(UUID accountId, UUID ownerId, long entryId) {
+        get(accountId, ownerId);
+        TracedEntry entry = accounts.findEntry(accountId, entryId)
+                .orElseThrow(() -> ApiException.notFound("entry.not_found", "Lançamento não encontrado."));
+        List<TracePart> parts = accounts.trace(entryId);
+        long explained = parts.stream().mapToLong(TracePart::partCents).sum();
+        return new Trace(entry.direction(), entry.amountCents(), entry.amountCents() - explained, parts);
     }
 
     Page statement(UUID accountId, UUID ownerId, OffsetDateTime from, OffsetDateTime to, Kind kind,

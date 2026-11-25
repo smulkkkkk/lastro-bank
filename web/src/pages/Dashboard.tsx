@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { BallastLine } from '../components/BallastLine'
 import { BankCard } from '../components/BankCard'
 import { DepositDialog } from '../components/DepositDialog'
+import { TraceDialog } from '../components/TraceDialog'
 import { Alert } from '../components/ui'
 import { fetchStatement, type Entry } from '../lib/api'
 import { usePrivacy } from '../lib/privacy'
@@ -14,6 +15,7 @@ export function Dashboard() {
   const { money } = usePrivacy()
   const [entries, setEntries] = useState<Entry[]>()
   const [error, setError] = useState('')
+  const [tracing, setTracing] = useState<Entry>()
   const [depositing, setDepositing] = useState(false)
   const [deposited, setDeposited] = useState<number | null>(null)
 
@@ -39,12 +41,12 @@ export function Dashboard() {
         <p className="balance">{money(account.availableCents)}</p>
         {account.heldCents > 0 && <p className="muted">{money(account.heldCents)} reservados</p>}
         <div className="actions">
-          <button type="button" className="button large" onClick={() => setDepositing(true)}>
+          <Link className="button large" to="/app/pix">
+            Fazer Pix
+          </Link>
+          <button type="button" className="button quiet large" onClick={() => setDepositing(true)}>
             Depositar
           </button>
-          <Link className="button quiet large" to="/app/cartoes">
-            Trocar cartão
-          </Link>
         </div>
         <p className="notice" role="status">
           {deposited !== null && `Depósito de ${money(deposited)} concluído.`}
@@ -59,7 +61,10 @@ export function Dashboard() {
 
       <section className="movements" aria-labelledby="movements-title">
         <div className="section-head">
-          <h2 id="movements-title">Movimentações</h2>
+          <div>
+            <h2 id="movements-title">Movimentações</h2>
+            <p className="muted">Toque em uma para ver o rastro do dinheiro.</p>
+          </div>
           <Link to="/app/extrato">Ver extrato completo</Link>
         </div>
         {error ? (
@@ -70,13 +75,15 @@ export function Dashboard() {
             </button>
           </div>
         ) : entries ? (
-          <BallastLine entries={entries} />
+          <BallastLine entries={entries} onTrace={setTracing} />
         ) : (
           <p className="state muted" role="status">
             Carregando movimentações…
           </p>
         )}
       </section>
+
+      {tracing && <TraceDialog accountId={account.id} entry={tracing} onClose={() => setTracing(undefined)} />}
 
       {depositing && (
         <DepositDialog

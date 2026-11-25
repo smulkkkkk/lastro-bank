@@ -46,6 +46,79 @@ export interface Card {
 
 export type CardChange = { frozen: boolean } | { contactless: boolean } | { primary: true }
 
+export interface TracePart {
+  entryId: number
+  kind: string
+  description: string
+  createdAt: string
+  amountCents: number
+  partCents: number
+}
+
+export interface Trace {
+  direction: 'DEBIT' | 'CREDIT'
+  amountCents: number
+  remainingCents: number
+  items: TracePart[]
+}
+
+export type PixKeyKind = 'EMAIL' | 'CPF' | 'RANDOM'
+
+export interface PixKey {
+  id: string
+  kind: PixKeyKind
+  value: string
+}
+
+export interface PixRecipient {
+  key: string
+  name: string
+  maskedCpf: string
+}
+
+export interface PixContact {
+  key: string
+  name: string
+}
+
+export interface PixLimits {
+  availableCents: number
+  limitCents: number
+  night: boolean
+}
+
+export interface PixReceipt {
+  id: string
+  key: string
+  recipientName: string
+  amountCents: number
+  message: string | null
+  createdAt: string
+}
+
+export interface Cdi {
+  day: string
+  dailyPercent: number
+  yearPercent: number
+}
+
+export interface Vault {
+  id: string
+  name: string
+  goalCents: number | null
+  cdiPercent: number
+  lockedUntil: string | null
+  locked: boolean
+  balanceCents: number
+  yieldCents: number
+}
+
+export interface VaultOverview {
+  cdi: Cdi | null
+  totalCents: number
+  items: Vault[]
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -136,7 +209,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     if (response.status === 401) onSessionEnd()
   }
   if (!response.ok) throw await failure(response)
-  return response.json()
+  return response.status === 204 ? (undefined as T) : response.json()
 }
 
 export async function resumeSession(): Promise<boolean> {
@@ -185,3 +258,41 @@ export function fetchStatement(accountId: string, query: StatementQuery = {}) {
   }
   return call<StatementPage>(`/accounts/${accountId}/statement?${params}`)
 }
+
+export const fetchTrace = (accountId: string, entryId: number) =>
+  call<Trace>(`/accounts/${accountId}/entries/${entryId}/trace`)
+
+export const fetchVaults = () => call<VaultOverview>('/vaults')
+
+export const createVault = (data: { name: string; goalCents: number | null; lockedUntil: string | null }) =>
+  call<Vault>('/vaults', { method: 'POST', body: JSON.stringify(data) })
+
+export const moveVault = (id: string, way: 'deposits' | 'withdrawals', amountCents: number, idempotencyKey: string) =>
+  call<Vault>(`/vaults/${id}/${way}`, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ amountCents }),
+  })
+
+export const deleteVault = (id: string) => call<void>(`/vaults/${id}`, { method: 'DELETE' })
+
+export const fetchPixKeys = () => call<PixKey[]>('/pix/keys')
+
+export const createPixKey = (kind: PixKeyKind) =>
+  call<PixKey>('/pix/keys', { method: 'POST', body: JSON.stringify({ kind }) })
+
+export const deletePixKey = (id: string) => call<void>(`/pix/keys/${id}`, { method: 'DELETE' })
+
+export const lookupPixKey = (key: string) =>
+  call<PixRecipient>('/pix/lookup', { method: 'POST', body: JSON.stringify({ key }) })
+
+export const fetchPixLimits = () => call<PixLimits>('/pix/limits')
+
+export const fetchPixContacts = () => call<PixContact[]>('/pix/contacts')
+
+export const sendPix = (key: string, amountCents: number, message: string, idempotencyKey: string) =>
+  call<PixReceipt>('/pix/transfers', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ key, amountCents, message: message.trim() || null }),
+  })

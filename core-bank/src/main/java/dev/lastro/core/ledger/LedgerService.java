@@ -20,8 +20,9 @@ public class LedgerService {
 
     public static final UUID FUNDING_ACCOUNT = new UUID(0, 1);
     public static final UUID MERCHANTS_ACCOUNT = new UUID(0, 2);
+    public static final UUID INTEREST_ACCOUNT = new UUID(0, 3);
 
-    public enum Kind { WELCOME, DEPOSIT, TRANSFER, VAULT_IN, VAULT_OUT, CARD_PURCHASE, REVERSAL }
+    public enum Kind { WELCOME, DEPOSIT, TRANSFER, VAULT_IN, VAULT_OUT, YIELD, CARD_PURCHASE, REVERSAL }
 
     public record LockedAccount(UUID id, boolean system, long balanceCents, long heldCents) {
         public long availableCents() {
@@ -89,12 +90,13 @@ public class LedgerService {
         postings.stream()
                 .sorted((a, b) -> b.direction().compareTo(a.direction()))
                 .forEach(posting -> jdbc.sql("""
-                                INSERT INTO core.ledger_entry (transaction_id, account_id, direction, amount_cents)
-                                VALUES (:tx, :account, :direction, :amount)""")
+                                INSERT INTO core.ledger_entry (transaction_id, account_id, direction, amount_cents, description)
+                                VALUES (:tx, :account, :direction, :amount, :description)""")
                         .param("tx", transactionId)
                         .param("account", posting.accountId())
                         .param("direction", posting.direction().name())
                         .param("amount", posting.amountCents())
+                        .param("description", posting.description())
                         .update());
         return transactionId;
     }

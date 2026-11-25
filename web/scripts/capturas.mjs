@@ -124,20 +124,36 @@ try {
   // Conta nova e fictícia a cada execução.
   await run(`(async () => {
     const digit = (d) => { const s = [...d].reduce((t, c, i) => t + c * (d.length + 1 - i), 0) * 10 % 11; return d + (s === 10 ? 0 : s) }
-    const cpf = digit(digit(String(Math.floor(Math.random() * 8e8) + 1e8)))
-    const email = 'capturas-' + crypto.randomUUID() + '@teste.dev'
-    const password = crypto.randomUUID()
     const post = async (path, body, headers = {}) => {
       const r = await fetch('/api/v1' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) })
       if (!r.ok) throw new Error(path + ' ' + r.status)
       return r.json()
     }
-    await post('/auth/register', { fullName: 'Cliente Capturas', email, cpf, password })
-    const { accessToken } = await post('/auth/login', { email, password })
-    const auth = { Authorization: 'Bearer ' + accessToken }
+    const enter = async (fullName) => {
+      const cpf = digit(digit(String(Math.floor(Math.random() * 8e8) + 1e8)))
+      const email = 'cliente-' + crypto.randomUUID().slice(0, 8) + '@teste.dev'
+      const password = crypto.randomUUID()
+      await post('/auth/register', { fullName, email, cpf, password })
+      const { accessToken } = await post('/auth/login', { email, password })
+      return { Authorization: 'Bearer ' + accessToken }
+    }
+    // Quem recebe entra primeiro: o cookie que fica é o de quem envia.
+    const friend = await enter('Marina Duarte')
+    const key = await post('/pix/keys', { kind: 'RANDOM' }, friend)
+    const auth = await enter('Cliente Capturas')
     const [account] = await (await fetch('/api/v1/accounts', { headers: auth })).json()
     for (const amountCents of [18000, 64050, 9990, 120000, 35000]) {
       await post('/accounts/' + account.id + '/deposits', { amountCents }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
+    }
+    // Cabe no limite noturno, para as capturas saírem a qualquer hora.
+    for (const [amountCents, message] of [[64000, 'aluguel'], [87000, 'viagem']]) {
+      await post('/pix/transfers', { key: key.value, amountCents, message }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
+    }
+    await post('/pix/keys', { kind: 'EMAIL' }, auth)
+    const later = new Date(Date.now() + 200 * 864e5).toISOString().slice(0, 10)
+    for (const [name, goalCents, lockedUntil, amountCents] of [['Viagem', 80000, null, 52000], ['Reserva', 300000, later, 40000], ['Teclado novo', 45000, null, 9000]]) {
+      const vault = await post('/vaults', { name, goalCents, lockedUntil }, auth)
+      await post('/vaults/' + vault.id + '/deposits', { amountCents }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
     localStorage.setItem('lastro-sessao', '1')
   })()`)
@@ -148,6 +164,8 @@ try {
     await viewport(width, height, mobile)
     for (const [screen, path, ready] of [
       ['painel', '/app', '.ballast-path'],
+      ['pix', '/app/pix', '.pix-contacts'],
+      ['caixinhas', '/app/caixinhas', '.tank'],
       ['cartoes', '/app/cartoes', '.wallet'],
       ['extrato', '/app/extrato', '.entry'],
       ['conta', '/app/conta', '.next'],
@@ -156,15 +174,26 @@ try {
       const name = `${format}-${screen}`
       await checkWidth(name)
       shots[name] = await shot()
-      if (screen === 'painel' || screen === 'cartoes') await save(`${name}.png`, shots[name])
+      if (screen !== 'extrato' && screen !== 'conta') await save(`${name}.png`, shots[name])
     }
+    await open('/app', '.entry-button')
+    await run(`[...document.querySelectorAll('.entry-button')].find((e) => e.textContent.includes('870,00')).click()`)
+    await wait(1800)
+    await checkWidth(`${format}-rastro`)
+    const origins = await run(`document.querySelectorAll('.trace-flow li').length`)
+    if (origins !== 3) problems.push(`${format}: o Rastro devia ter 3 origens, tem ${origins}`)
+    const spill = await run(`(() => { const d = document.querySelector('.trace'); return d.scrollWidth - d.clientWidth })()`)
+    if (spill > 0) problems.push(`${format}: o Rastro vaza ${spill}px`)
+    const touching = await run(`(() => { const r = [...document.querySelectorAll('.trace-flow li')].map((e) => e.getBoundingClientRect()); return r.some((a, i) => i > 0 && a.top < r[i - 1].bottom - 1) })()`)
+    if (touching) problems.push(`${format}: textos do Rastro se sobrepõem`)
+    await save(`${format}-rastro.png`, await shot())
     await open('/', '.wallet')
     await checkWidth(`${format}-inicial`)
   }
 
   // O menor celular que o projeto promete atender.
   await viewport(360, 640, true)
-  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next']]) {
+  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next']]) {
     await open(path, ready)
     await checkWidth(`360px ${path}`)
   }
@@ -206,8 +235,63 @@ try {
   })()`)
   if (new Set([behaviour.first, behaviour.second, behaviour.third]).size !== 3) problems.push('carteira não trocou: ' + JSON.stringify(behaviour))
   if (behaviour.frozen !== 1) problems.push('bloqueio não apareceu no cartão')
+  // Pix pela tela, do contato até o comprovante. Dois cliques em enviar não mandam duas vezes.
+  await run(`localStorage.removeItem('lastro-ocultar')`)
+  await open('/app/pix', '.pix-contacts button')
+  const pix = await run(`(async () => {
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms))
+    const until = async (selector) => { for (let i = 0; i < 80; i++) { const e = document.querySelector(selector); if (e) return e; await pause(100) } throw new Error('faltou ' + selector) }
+    const balance = () => document.querySelector('.pix-facts dd').textContent
+    const before = balance()
+    document.querySelector('.pix-contacts button').click()
+    const input = await until('.money-input')
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '1234')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await pause(150)
+    const button = document.querySelector('.pix-step .button')
+    const label = button.textContent
+    button.click(); button.click()
+    await until('.pix-receipt')
+    await pause(2000)
+    return { before, after: balance(), label, shown: document.querySelector('.pix-receipt').innerText }
+  })()`)
+  const digits = (text) => Number(text.replace(/\D/g, ''))
+  if (digits(pix.before) - digits(pix.after) !== 1234) problems.push('Pix: saldo mudou errado: ' + JSON.stringify(pix))
+  if (!pix.shown.includes('Marina Duarte')) problems.push('Pix: comprovante sem quem recebeu')
+  await save('pc-comprovante.png', await shot())
+  // Guardar e resgatar pela tela devolve o saldo ao começo.
+  await open('/app/caixinhas', '.tank')
+  const saving = await run(`(async () => {
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms))
+    const total = () => document.querySelector('.vaults .balance').textContent
+    const move = async (label) => {
+      [...document.querySelectorAll('.tank')].find((t) => t.textContent.includes('Viagem')).querySelectorAll('.button').forEach((b) => b.textContent === label && b.click())
+      await pause(300)
+      const input = document.querySelector('.money-input')
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '777')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      await pause(150)
+      const send = document.querySelector('.dialog-actions .button:not(.quiet)'); send.click(); send.click()
+      await pause(2500)
+    }
+    const before = total()
+    await move('Guardar')
+    const middle = total()
+    await move('Resgatar')
+    return { before, middle, after: total() }
+  })()`)
+  if (digits(saving.middle) - digits(saving.before) !== 777 || saving.after !== saving.before) problems.push('Caixinha: ' + JSON.stringify(saving))
+  await run(`localStorage.setItem('lastro-ocultar', '1')`)
+  await open('/app/caixinhas', '.tank')
+  await run(`(() => { const open = [...document.querySelectorAll(".tank .button")].find((b) => b.textContent === "Guardar"); open.click() })()`)
+  await wait(600)
+  // Os controles da simulação mostram o que a pessoa escolheu, não o dinheiro dela.
+  const vaultLeak = await run(`(() => { const c = document.querySelector('.vaults').cloneNode(true); c.querySelector('.simulator-controls').remove(); return c.textContent.match(/R\\$\\s?\\d[\\d.,]*/g) || [] })()`)
+  if (vaultLeak.length) problems.push('caixinhas mostram valores com o olho fechado: ' + vaultLeak.join(' '))
   await open('/app', '.ballast-path')
-  const leaked = await run(`(document.querySelector('.app-main').innerText.match(/R\\$\\s?\\d/g) || []).length`)
+  await run(`document.querySelector('.entry-button').click()`)
+  await wait(1500)
+  const leaked = await run(`(document.querySelector('.app').innerText.match(/R\\$\\s?\\d/g) || []).length`)
   if (leaked) problems.push(`valores visíveis com o olho fechado: ${leaked}`)
   await run(`localStorage.removeItem('lastro-ocultar')`)
 

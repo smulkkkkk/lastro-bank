@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { EntryRow } from '../components/EntryRow'
+import { TraceDialog } from '../components/TraceDialog'
 import { Alert } from '../components/ui'
 import { fetchStatement, type Entry } from '../lib/api'
 import { messageOf } from '../lib/session'
@@ -13,6 +14,9 @@ const PERIODS = [
 ]
 const KINDS = [
   { value: '', label: 'Todos os tipos' },
+  { value: 'TRANSFER', label: 'Pix' },
+  { value: 'VAULT_IN', label: 'Guardado em caixinha' },
+  { value: 'VAULT_OUT', label: 'Resgate de caixinha' },
   { value: 'DEPOSIT', label: 'Depósitos' },
   { value: 'WELCOME', label: 'Boas-vindas' },
 ]
@@ -21,6 +25,7 @@ export function Statement() {
   const { account } = useBank()
   const [kind, setKind] = useState('')
   const [days, setDays] = useState('')
+  const [tracing, setTracing] = useState<Entry>()
   const [entries, setEntries] = useState<Entry[]>([])
   const [cursor, setCursor] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -81,10 +86,11 @@ export function Statement() {
       {entries.length > 0 && (
         <ol className="entries">
           {entries.map((entry) => (
-            <EntryRow key={entry.entryId} entry={entry} />
+            <EntryRow key={entry.entryId} entry={entry} onTrace={setTracing} />
           ))}
         </ol>
       )}
+      {tracing && <TraceDialog accountId={account.id} entry={tracing} onClose={() => setTracing(undefined)} />}
       {loading && (
         <p className="state muted" role="status">
           Carregando lançamentos…

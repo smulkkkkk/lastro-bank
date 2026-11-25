@@ -12,7 +12,7 @@ const BOTTOM = 30
  * Linha de lastro: o saldo caminha da esquerda até hoje; em "hoje" a linha vira e desce pelos
  * lançamentos, do mais novo ao mais antigo. Em degraus, porque saldo não muda aos poucos.
  */
-export function BallastLine({ entries }: { entries: Entry[] }) {
+export function BallastLine({ entries, onTrace }: { entries: Entry[]; onTrace: (entry: Entry) => void }) {
   const { money } = usePrivacy()
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -82,7 +82,7 @@ export function BallastLine({ entries }: { entries: Entry[] }) {
       </div>
       <ol className="entries on-line">
         {entries.map((entry, i) => (
-          <EntryRow key={entry.entryId} entry={entry} active={active === entries.length - 1 - i} />
+          <EntryRow key={entry.entryId} entry={entry} onTrace={onTrace} active={active === entries.length - 1 - i} />
         ))}
       </ol>
     </div>

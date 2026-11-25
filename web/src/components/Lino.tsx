@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 
 const CENTER = 100
 const RADIUS = 62
@@ -8,20 +8,20 @@ const SPIKES = Array.from({ length: 13 }, (_, i) => {
   const angle = ((200 + i * 15) * Math.PI) / 180
   const point = (r: number, offset: number) =>
     `${(CENTER + r * Math.cos(angle + offset)).toFixed(1)} ${(CENTER + r * Math.sin(angle + offset)).toFixed(1)}`
-  return `M${point(RADIUS - 4, -0.075)}L${point(RADIUS + 11, 0)}L${point(RADIUS - 4, 0.075)}Z`
+  return `M${point(RADIUS - 8, -0.15)}L${point(RADIUS + 11, 0)}L${point(RADIUS - 8, 0.15)}Z`
 })
 
-/** Lino, o baiacu. Tocar nele faz inflar. */
-export function Lino({ size = 160, puffed = false }: { size?: number; puffed?: boolean }) {
+/** Lino, o baiacu. Tocar nele faz inflar; level (0 a 1) diz o quanto ele já está inflado. */
+export function Lino({ size = 160, level = 0.5 }: { size?: number; level?: number }) {
   const [touched, setTouched] = useState(false)
-  const inflated = puffed || touched
+  const inflated = touched
 
   return (
     <button
       type="button"
       className="lino"
       data-puffed={inflated}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, '--puff': level } as CSSProperties}
       aria-label={inflated ? 'Lino, o baiacu, inflado' : 'Lino, o baiacu. Toque para inflar'}
       onClick={() => setTouched((value) => !value)}
     >
