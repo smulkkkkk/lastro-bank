@@ -10,10 +10,12 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "capturas": "node scripts/capturas.mjs"
   },
   "dependencies": {
     "@fontsource-variable/onest": "^5.3.1",
+    "@fontsource/michroma": "^5.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^7.18.7"

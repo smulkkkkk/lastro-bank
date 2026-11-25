@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Cada token de renovação vale uma vez. Se um token já usado reaparece, alguém o copiou: a
  * família inteira é revogada e todos precisam entrar de novo.
+ *
+ * <p>Exceção: trocar de página no meio da renovação descarta a resposta, e o navegador repete o
+ * token antigo. Isso é aceito por alguns segundos, se o sucessor nunca foi usado. O sucessor é
+ * invalidado na hora; se ele aparecer depois, conta como reuso.
  */
 @Service
 class RefreshTokenService {
@@ -23,7 +27,11 @@ class RefreshTokenService {
     record Rotation(UUID userId, String newToken) {
     }
 
-    private record Stored(UUID id, UUID familyId, UUID userId, boolean used, boolean usable) {
+    private record Stored(UUID id, UUID familyId, UUID userId, boolean used, boolean justUsed, boolean usable,
+            UUID successorId) {
+    }
+
+    private record Issued(UUID id, String token) {
     }
 
     private final JdbcClient jdbc;
@@ -37,7 +45,7 @@ class RefreshTokenService {
 
     @Transactional
     public String start(UUID userId) {
-        return issue(userId, UUID.randomUUID());
+        return issue(userId, UUID.randomUUID()).token();
     }
 
     /** Devolve vazio em vez de lançar exceção, porque a revogação da família precisa ser confirmada. */
@@ -48,15 +56,29 @@ class RefreshTokenService {
             return Optional.empty();
         }
         Stored stored = found.get();
-        if (stored.used()) {
+        if (stored.used() && !discardUnusedSuccessor(stored)) {
             revokeFamily(stored.familyId());
             return Optional.empty();
         }
         if (!stored.usable()) {
             return Optional.empty();
         }
-        jdbc.sql("UPDATE core.refresh_token SET used_at = now() WHERE id = :id").param("id", stored.id()).update();
-        return Optional.of(new Rotation(stored.userId(), issue(stored.userId(), stored.familyId())));
+        Issued issued = issue(stored.userId(), stored.familyId());
+        // Repetir não estende a tolerância: vale a hora do primeiro uso.
+        jdbc.sql("""
+                        UPDATE core.refresh_token SET used_at = coalesce(used_at, now()), successor_id = :successor
+                         WHERE id = :id""")
+                .param("successor", issued.id())
+                .param("id", stored.id())
+                .update();
+        return Optional.of(new Rotation(stored.userId(), issued.token()));
+    }
+
+    private boolean discardUnusedSuccessor(Stored stored) {
+        return stored.justUsed() && stored.successorId() != null
+                && jdbc.sql("UPDATE core.refresh_token SET used_at = now() WHERE id = :id AND used_at IS NULL")
+                        .param("id", stored.successorId())
+                        .update() == 1;
     }
 
     @Transactional
@@ -66,7 +88,8 @@ class RefreshTokenService {
 
     private Optional<Stored> findForUpdate(String token) {
         return jdbc.sql("""
-                        SELECT id, family_id, user_id, used_at IS NOT NULL AS used,
+                        SELECT id, family_id, user_id, successor_id, used_at IS NOT NULL AS used,
+                               coalesce(used_at > now() - interval '10 seconds', false) AS just_used,
                                -- Olha a família toda: um token emitido durante a revogação também não vale.
                                expires_at > now() AND NOT EXISTS (
                                    SELECT 1 FROM core.refresh_token f
@@ -74,7 +97,8 @@ class RefreshTokenService {
                           FROM core.refresh_token t WHERE token_hash = :hash FOR UPDATE OF t""")
                 .param("hash", hash(token))
                 .query((rs, n) -> new Stored(rs.getObject("id", UUID.class), rs.getObject("family_id", UUID.class),
-                        rs.getObject("user_id", UUID.class), rs.getBoolean("used"), rs.getBoolean("usable")))
+                        rs.getObject("user_id", UUID.class), rs.getBoolean("used"), rs.getBoolean("just_used"),
+                        rs.getBoolean("usable"), rs.getObject("successor_id", UUID.class)))
                 .optional();
     }
 
@@ -84,20 +108,21 @@ class RefreshTokenService {
                 .update();
     }
 
-    private String issue(UUID userId, UUID familyId) {
+    private Issued issue(UUID userId, UUID familyId) {
+        UUID id = UUID.randomUUID();
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         jdbc.sql("""
                         INSERT INTO core.refresh_token (id, family_id, user_id, token_hash, expires_at)
                         VALUES (:id, :family, :user, :hash, :expires)""")
-                .param("id", UUID.randomUUID())
+                .param("id", id)
                 .param("family", familyId)
                 .param("user", userId)
                 .param("hash", hash(token))
                 .param("expires", OffsetDateTime.now(ZoneOffset.UTC).plus(properties.refreshTokenTtl()))
                 .update();
-        return token;
+        return new Issued(id, token);
     }
 
     private static byte[] hash(String token) {

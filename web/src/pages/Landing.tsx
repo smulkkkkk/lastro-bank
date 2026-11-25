@@ -1,62 +1,72 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { AccountCard } from '../components/AccountCard'
+import { BettaCanvas } from '../components/BettaCanvas'
 import { LedgerDemo } from '../components/LedgerDemo'
+import { Lino } from '../components/Lino'
+import { Wordmark } from '../components/Marks'
 import { Brand, ThemeToggle } from '../components/ui'
+import { Wallet } from '../components/Wallet'
 import { useSession } from '../lib/session'
+
+const SAMPLE = [
+  { design: 'ONIX' as const, label: 'Principal', last4: '2611', frozen: false, contactless: true },
+  { design: 'MARE' as const, label: 'Compras online', last4: '0708', frozen: false, contactless: true },
+  { design: 'BRASA' as const, label: 'Assinaturas', last4: '1933', frozen: false, contactless: true },
+]
 
 export function Landing() {
   const { status } = useSession()
+  const [position, setPosition] = useState(0)
+  const inside = status === 'in'
+
   return (
     <div className="landing">
-      <header className="topbar">
-        <Brand />
-        <nav aria-label="Principal">
-          <ThemeToggle />
-          {status === 'in' ? (
-            <Link className="button" to="/app">
-              Abrir minha conta
+      <section className="stage">
+        <BettaCanvas />
+        <header className="stage-top">
+          <div className="stage-left">
+            {inside ? null : <Link to="/entrar">Entrar</Link>}
+            <a href="#prova">Como funciona</a>
+          </div>
+          <Brand />
+          <div className="stage-right">
+            <ThemeToggle />
+            <Link className="button" to={inside ? '/app' : '/criar-conta'}>
+              {inside ? 'Abrir conta' : 'Criar conta'}
             </Link>
-          ) : (
-            <>
-              <Link className="button quiet" to="/entrar">
-                Entrar
-              </Link>
-              <Link className="button" to="/criar-conta">
-                Criar conta
-              </Link>
-            </>
-          )}
-        </nav>
-      </header>
+          </div>
+        </header>
+
+        <div className="stage-name">
+          <Wordmark />
+          <span>Banco digital</span>
+        </div>
+
+        <div className="stage-fact">
+          <strong>Zero centavos</strong>
+          <span>perdidos em 200 movimentos simultâneos, nos testes do projeto</span>
+        </div>
+        <a className="stage-cue" href="#carteira">
+          Ver os cartões
+        </a>
+        <div className="stage-line">
+          <h1>Cada centavo tem origem</h1>
+          <p>Projeto de demonstração. O dinheiro é fictício.</p>
+        </div>
+      </section>
 
       <main>
-        <section className="hero">
-          <div>
-            <h1>Um banco em que cada centavo tem origem.</h1>
-            <p className="lead">
-              Abra uma conta em um minuto e receba R$ 1.000,00 para testar. Este é um projeto de demonstração: o
-              dinheiro é fictício e nenhum dado real é necessário.
-            </p>
-            <div className="hero-actions">
-              <Link className="button large" to={status === 'in' ? '/app' : '/criar-conta'}>
-                {status === 'in' ? 'Abrir minha conta' : 'Criar conta'}
-              </Link>
-              <a className="button quiet large" href="#prova">
-                Ver a regra funcionando
-              </a>
-            </div>
-          </div>
-          <div className="hero-card">
-            <AccountCard branch="0001" number="100000-9" />
-          </div>
+        <section className="pocket" id="carteira">
+          <h2>Três cartões em um só bolso</h2>
+          <Wallet cards={SAMPLE} position={position} onChange={setPosition} />
         </section>
 
         <section className="proof" id="prova">
           <div>
             <h2>Tente criar dinheiro do nada</h2>
             <p>
-              Todo movimento no Lastro tem dois lados: o que sai de uma conta entra em outra. Se os valores não batem,
-              o próprio PostgreSQL desfaz a operação, mesmo que a aplicação esteja errada.
+              Todo movimento no Lastro tem dois lados: o que sai de uma conta entra em outra. Se os valores não batem, o
+              próprio PostgreSQL desfaz a operação, mesmo que a aplicação esteja errada.
             </p>
           </div>
           <LedgerDemo />
@@ -82,6 +92,20 @@ export function Landing() {
               <dd>Se alguém reutilizar uma sessão sua, ela é encerrada para todos os aparelhos que a usam.</dd>
             </div>
           </dl>
+        </section>
+
+        <section className="meet">
+          <Lino size={200} />
+          <div>
+            <h2>Este é o Lino</h2>
+            <p>
+              Abra uma conta em um minuto e receba R$ 1.000,00 fictícios. O Lino vai inflar conforme você guarda
+              dinheiro. Toque nele para ver.
+            </p>
+            <Link className="button large" to={inside ? '/app' : '/criar-conta'}>
+              {inside ? 'Abrir conta' : 'Criar conta'}
+            </Link>
+          </div>
         </section>
       </main>
 

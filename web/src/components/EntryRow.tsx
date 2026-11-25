@@ -1,5 +1,5 @@
 import type { Entry } from '../lib/api'
-import { formatCents } from '../lib/money'
+import { usePrivacy } from '../lib/privacy'
 
 const dateTime = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -12,6 +12,7 @@ const dateTime = new Intl.DateTimeFormat('pt-BR', {
 export const formatDate = (iso: string) => dateTime.format(new Date(iso))
 
 export function EntryRow({ entry, active = false }: { entry: Entry; active?: boolean }) {
+  const { money } = usePrivacy()
   const credit = entry.direction === 'CREDIT'
   return (
     <li className="entry" data-active={active}>
@@ -21,9 +22,9 @@ export function EntryRow({ entry, active = false }: { entry: Entry; active?: boo
       </div>
       <div className="entry-values">
         <span className={credit ? 'amount credit' : 'amount'}>
-          {credit ? '+' : '−'} {formatCents(entry.amountCents)}
+          {credit ? '+' : '−'} {money(entry.amountCents)}
         </span>
-        <span className="entry-balance">Saldo {formatCents(entry.balanceAfterCents)}</span>
+        <span className="entry-balance">Saldo {money(entry.balanceAfterCents)}</span>
       </div>
     </li>
   )

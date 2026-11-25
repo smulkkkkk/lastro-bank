@@ -1,5 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router'
+import { BettaCanvas } from '../components/BettaCanvas'
+import { Wordmark } from '../components/Marks'
 import { Alert, Brand, Field, ThemeToggle } from '../components/ui'
 import { ApiError, register } from '../lib/api'
 import { fictitiousCpf, formatCpf, isValidCpf } from '../lib/cpf'
@@ -8,15 +10,23 @@ import { messageOf, useSession } from '../lib/session'
 function AccessLayout({ title, intro, children }: { title: string; intro: string; children: ReactNode }) {
   return (
     <div className="access">
-      <header className="topbar">
-        <Brand />
-        <ThemeToggle />
-      </header>
-      <main className="access-panel">
-        <h1>{title}</h1>
-        <p className="muted">{intro}</p>
-        {children}
-      </main>
+      <div className="access-scene">
+        <BettaCanvas />
+        <div className="stage-name">
+          <Wordmark />
+        </div>
+      </div>
+      <div className="access-side">
+        <header className="access-top">
+          <Brand />
+          <ThemeToggle />
+        </header>
+        <main className="access-panel">
+          <h1>{title}</h1>
+          <p className="muted">{intro}</p>
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

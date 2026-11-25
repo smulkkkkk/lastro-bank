@@ -3,6 +3,7 @@ package dev.lastro.core.account;
 import dev.lastro.core.account.AccountRepository.Account;
 import dev.lastro.core.account.AccountRepository.PostedDeposit;
 import dev.lastro.core.account.AccountRepository.StatementLine;
+import dev.lastro.core.card.CardService;
 import dev.lastro.core.ledger.LedgerService;
 import dev.lastro.core.ledger.LedgerService.Kind;
 import dev.lastro.core.ledger.Posting;
@@ -26,10 +27,12 @@ public class AccountService {
 
     private final AccountRepository accounts;
     private final LedgerService ledger;
+    private final CardService cards;
 
-    AccountService(AccountRepository accounts, LedgerService ledger) {
+    AccountService(AccountRepository accounts, LedgerService ledger, CardService cards) {
         this.accounts = accounts;
         this.ledger = ledger;
+        this.cards = cards;
     }
 
     /** Faz parte da transação do cadastro: usuário sem conta nunca existe. */
@@ -37,6 +40,7 @@ public class AccountService {
     public void openChecking(UUID ownerId) {
         UUID accountId = UUID.randomUUID();
         accounts.insertChecking(accountId, ownerId, AccountNumber.format(accounts.nextNumber()));
+        cards.issueFor(accountId);
         ledger.post(Kind.WELCOME, "Saldo de boas-vindas", "welcome:" + accountId, List.of(
                 Posting.debit(LedgerService.FUNDING_ACCOUNT, WELCOME_CENTS),
                 Posting.credit(accountId, WELCOME_CENTS)));

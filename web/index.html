@@ -1,16 +1,18 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Lastro, banco digital de demonstração em Java, Go, PostgreSQL e React." />
-    <meta name="theme-color" content="#12161A" />
+    <meta name="theme-color" content="#d3d3d8" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icone-192.png" />
     <link rel="icon" type="image/svg+xml" href="/icone.svg" />
     <title>Lastro</title>
     <script>
       // Antes da primeira pintura, para o tema não piscar.
       try {
-        document.documentElement.dataset.theme = localStorage.getItem('lastro-tema') || 'dark'
+        document.documentElement.dataset.theme = localStorage.getItem('lastro-tema') || 'light'
       } catch {}
     </script>
   </head>

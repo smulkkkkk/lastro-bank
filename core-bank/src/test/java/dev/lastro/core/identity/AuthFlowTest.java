@@ -97,9 +97,37 @@ class AuthFlowTest extends IntegrationTest {
         Cookie second = rotated.getCookie("lastro_refresh");
         assertThat(second.getValue()).isNotEqualTo(first.getValue());
 
+        jdbc.sql("UPDATE core.refresh_token SET used_at = now() - interval '11 seconds' WHERE used_at IS NOT NULL")
+                .update();
         assertThat(refresh(first).getStatus()).isEqualTo(401);
         assertThat(refresh(second).getStatus()).as("token novo cai junto").isEqualTo(401);
         assertThat(login(customer.email(), PASSWORD).getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void lostResponseCanBeRetriedButTheLostTokenDies() throws Exception {
+        Customer customer = newCustomer();
+        Cookie first = customer.refresh();
+        Cookie lost = refresh(first).getCookie("lastro_refresh");
+
+        var retried = refresh(first);
+        assertThat(retried.getStatus()).isEqualTo(200);
+        Cookie current = retried.getCookie("lastro_refresh");
+
+        // Quem apresentar o token perdido está com uma cópia: todos caem.
+        assertThat(refresh(lost).getStatus()).isEqualTo(401);
+        assertThat(refresh(current).getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void retryIsRefusedOnceTheNewTokenWasUsed() throws Exception {
+        Customer customer = newCustomer();
+        Cookie first = customer.refresh();
+        Cookie second = refresh(first).getCookie("lastro_refresh");
+        Cookie third = refresh(second).getCookie("lastro_refresh");
+
+        assertThat(refresh(first).getStatus()).isEqualTo(401);
+        assertThat(refresh(third).getStatus()).isEqualTo(401);
     }
 
     @Test

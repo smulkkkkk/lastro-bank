@@ -32,6 +32,20 @@ export interface StatementQuery {
   limit?: number
 }
 
+export type CardDesign = 'ONIX' | 'MARE' | 'BRASA'
+
+export interface Card {
+  id: string
+  design: CardDesign
+  label: string
+  last4: string
+  primary: boolean
+  frozen: boolean
+  contactless: boolean
+}
+
+export type CardChange = { frozen: boolean } | { contactless: boolean } | { primary: true }
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -97,7 +111,7 @@ async function failure(response: Response): Promise<ApiError> {
 function refresh(): Promise<boolean> {
   refreshing ??= (async () => {
     const attempt = async () => {
-      const response = await send('/auth/refresh', { method: 'POST' })
+      const response = await send('/auth/refresh', { method: 'POST', keepalive: true })
       if (response.ok) {
         accessToken = (await response.json()).accessToken
         return true
@@ -151,6 +165,11 @@ export async function logout() {
 }
 
 export const fetchAccounts = () => call<Account[]>('/accounts')
+
+export const fetchCards = () => call<Card[]>('/cards')
+
+export const updateCard = (id: string, change: CardChange) =>
+  call<Card>(`/cards/${id}`, { method: 'PATCH', body: JSON.stringify(change) })
 
 export const deposit = (accountId: string, amountCents: number, idempotencyKey: string) =>
   call<{ transactionId: string }>(`/accounts/${accountId}/deposits`, {

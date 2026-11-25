@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import type { Entry } from '../lib/api'
-import { formatCents } from '../lib/money'
+import { usePrivacy } from '../lib/privacy'
 import { EntryRow, formatDate } from './EntryRow'
 
 const HEIGHT = 190
@@ -13,6 +13,7 @@ const BOTTOM = 30
  * lançamentos, do mais novo ao mais antigo. Em degraus, porque saldo não muda aos poucos.
  */
 export function BallastLine({ entries }: { entries: Entry[] }) {
+  const { money } = usePrivacy()
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [active, setActive] = useState<number | null>(null)
@@ -75,7 +76,7 @@ export function BallastLine({ entries }: { entries: Entry[] }) {
         )}
         <p className="ballast-caption" aria-hidden="true">
           {selected
-            ? `${formatCents(selected.balanceAfterCents)} em ${formatDate(selected.createdAt)}`
+            ? `${money(selected.balanceAfterCents)} em ${formatDate(selected.createdAt)}`
             : 'Saldo após cada lançamento'}
         </p>
       </div>

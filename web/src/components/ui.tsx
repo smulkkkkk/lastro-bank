@@ -1,20 +1,18 @@
 import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { FishMark, Wordmark } from './Marks'
 
-export function Brand() {
+export function Brand({ to = '/' }: { to?: string }) {
   return (
-    <Link to="/" className="brand" aria-label="Lastro, página inicial">
-      <svg viewBox="4 6 26 23" aria-hidden="true">
-        <path d="M6 10h11v8h9v7" />
-        <circle cx="26" cy="25" r="3" />
-      </svg>
-      Lastro
+    <Link to={to} className="brand" aria-label="Lastro, início">
+      <FishMark />
+      <Wordmark />
     </Link>
   )
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState(document.documentElement.dataset.theme ?? 'dark')
+  const [theme, setTheme] = useState(document.documentElement.dataset.theme ?? 'light')
   const next = theme === 'dark' ? 'light' : 'dark'
   return (
     <button
@@ -32,8 +30,8 @@ export function ThemeToggle() {
       }}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-        <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
       </svg>
     </button>
   )
@@ -61,6 +59,35 @@ export function Field({ label, hint, error, action, ...input }: FieldProps) {
           {note}
         </p>
       )}
+    </div>
+  )
+}
+
+interface SwitchProps {
+  label: string
+  hint: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (checked: boolean) => void
+}
+
+export function Switch({ label, hint, checked, disabled, onChange }: SwitchProps) {
+  const id = useId()
+  return (
+    <div className="switch-row">
+      <div>
+        <span id={id}>{label}</span>
+        <p className="muted">{hint}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        className="switch"
+        aria-checked={checked}
+        aria-labelledby={id}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+      />
     </div>
   )
 }
