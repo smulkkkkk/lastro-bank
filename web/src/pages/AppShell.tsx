@@ -19,6 +19,8 @@ const ICONS = {
   home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
   pix: 'M4 9h14l-4-4M20 15H6l4 4',
   vaults: 'M4 5v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5M4 11c3-2 5-2 8 0s5 2 8 0',
+  credit: 'M12 3v18M17 7H9.500a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6',
+  invest: 'M4 19l5-6 4 3 7-9M15 7h5v5',
   cards: 'M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10.500h18',
   statement: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9.500 8h5M9.500 12h5',
   profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.500 21a7.500 7.500 0 0 1 15 0',
@@ -29,6 +31,8 @@ const PLACES = [
   { to: '/app/pix', label: 'Pix', icon: ICONS.pix },
   { to: '/app/cartoes', label: 'Cartões', icon: ICONS.cards },
   { to: '/app/caixinhas', label: 'Caixinhas', icon: ICONS.vaults },
+  { to: '/app/investir', label: 'Investir', icon: ICONS.invest },
+  { to: '/app/credito', label: 'Crédito', icon: ICONS.credit },
   { to: '/app/extrato', label: 'Extrato', icon: ICONS.statement },
   { to: '/app/conta', label: 'Conta', icon: ICONS.profile },
 ]

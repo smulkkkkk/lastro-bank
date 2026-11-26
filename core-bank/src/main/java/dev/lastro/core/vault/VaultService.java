@@ -121,11 +121,7 @@ class VaultService {
         Vault vault = find(id, ownerId);
 
         String ref = "vault:" + id + ":" + way + ":" + idempotencyKey;
-        Optional<Long> previous = jdbc.sql("""
-                        SELECT e.amount_cents FROM core.ledger_transaction t
-                          JOIN core.ledger_entry e ON e.transaction_id = t.id AND e.account_id = :id
-                         WHERE t.external_ref = :ref""")
-                .param("id", id).param("ref", ref).query(Long.class).optional();
+        Optional<Long> previous = ledger.amountByRef(ref, id);
         if (previous.isPresent()) {
             if (previous.get() != cents) {
                 throw ApiException.conflict("idempotency.mismatch",

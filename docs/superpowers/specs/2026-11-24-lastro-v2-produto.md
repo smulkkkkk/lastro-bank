@@ -32,11 +32,11 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Boleto e recarga | Contas fictícias pagas pelo razão | 5 |
 | Histórico de compras | Compras simuladas no cartão, extrato por cartão | 5 |
 | Rastro | Consulta sobre o razão | 5 ✅ |
-| Crédito e conversão de limite em débito | Limite, fatura e conversão com taxa exibida antes | 6 |
+| Crédito e conversão de limite em débito | Limite, fatura e conversão com taxa exibida antes | 6 ✅ |
 | Caixinhas com % do CDI | CDI público do Banco Central, rendimento diário no razão | 6 ✅ |
-| Empréstimo | Simulação com parcelas e custo total, dinheiro fictício | 6 |
-| Investir, bitcoin e moedas | Cotações públicas, compra e venda simuladas | 7 |
-| Notícias | Feed de fonte pública, sempre com link para a origem | 7 |
+| Empréstimo | Simulação com parcelas e custo total, dinheiro fictício | 6 ✅ |
+| Investir, bitcoin e moedas | Cotações públicas, compra e venda simuladas | 7 ✅ |
+| Notícias | Feed de fonte pública, sempre com link para a origem | 7 ✅ |
 | Antifraude em Go | Como na especificação base | 8 |
 | Chat com IA | Assistente que responde e explica, sem poder mover dinheiro | 9 |
 | WhatsApp pelo n8n | Webhook que abre atendimento humano | 9 |
@@ -59,6 +59,18 @@ A etapa 8 coloca a reserva e a análise no meio do caminho.
 - Banco Central fora do ar não muda nada: os dias que faltarem são pagos quando a taxa chegar.
 - Livre paga 100% do CDI. Trancada paga 110% e só resgata na data, de 30 dias a 5 anos.
 - Impostos (IR e IOF) não são simulados, e a tela avisa.
+
+## Como o crédito funciona
+
+- Cada cliente tem uma conta CREDIT no razão. Comprar debita essa conta; pagar a fatura credita. O
+  banco de dados garante que o saldo dela fique entre o limite (negativo) e zero.
+- Limite inicial de R$ 3.000,00. Fecha no dia 25, vence no dia 5. Parcelas de 1 a 12, mínimo R$ 5,00.
+- Fatura vencida bloqueia novas compras no crédito e conversões. O débito continua.
+- Conversão de limite: taxa de 4,5%, mais 2,5% por parcela extra, até 6 parcelas.
+- Empréstimo: R$ 100,00 a R$ 5.000,00, de 3 a 24 parcelas, 2,49% ao mês na tabela Price. Um por vez.
+  Os juros entram no razão quando a parcela é paga.
+- Toda contratação só vale pelo total que a pessoa viu na tela.
+- Sem multa nem juros de atraso por enquanto.
 
 ## Limites honestos
 

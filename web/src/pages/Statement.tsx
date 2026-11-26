@@ -17,6 +17,13 @@ const KINDS = [
   { value: 'TRANSFER', label: 'Pix' },
   { value: 'VAULT_IN', label: 'Guardado em caixinha' },
   { value: 'VAULT_OUT', label: 'Resgate de caixinha' },
+  { value: 'CARD_PURCHASE', label: 'Compras no débito' },
+  { value: 'INVOICE_PAYMENT', label: 'Pagamento de fatura' },
+  { value: 'CREDIT_CONVERSION', label: 'Limite convertido' },
+  { value: 'LOAN', label: 'Empréstimo' },
+  { value: 'LOAN_PAYMENT', label: 'Parcelas do empréstimo' },
+  { value: 'INVESTMENT_BUY', label: 'Compra de investimento' },
+  { value: 'INVESTMENT_SELL', label: 'Venda de investimento' },
   { value: 'DEPOSIT', label: 'Depósitos' },
   { value: 'WELCOME', label: 'Boas-vindas' },
 ]

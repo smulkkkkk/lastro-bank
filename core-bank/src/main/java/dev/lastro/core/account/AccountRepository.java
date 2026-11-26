@@ -49,8 +49,11 @@ class AccountRepository {
         return jdbc.sql("SELECT nextval('core.account_number_seq')").query(Long.class).single();
     }
 
-    void insert(UUID id, UUID ownerId, String kind, String number) {
-        jdbc.sql("INSERT INTO core.account (id, owner_id, kind, number) VALUES (:id, :owner, :kind, :number)")
+    void insert(UUID id, UUID ownerId, String kind, String number, long creditLimitCents) {
+        jdbc.sql("""
+                        INSERT INTO core.account (id, owner_id, kind, number, credit_limit_cents)
+                        VALUES (:id, :owner, :kind, :number, :limit)""")
+                .param("limit", creditLimitCents)
                 .param("id", id)
                 .param("owner", ownerId)
                 .param("kind", kind)
@@ -58,15 +61,17 @@ class AccountRepository {
                 .update();
     }
 
-    UUID checkingId(UUID ownerId) {
-        return jdbc.sql("SELECT id FROM core.account WHERE owner_id = :owner AND kind = 'CHECKING'")
+    /** Só para os tipos que existem uma vez por cliente. */
+    UUID idByKind(UUID ownerId, String kind) {
+        return jdbc.sql("SELECT id FROM core.account WHERE owner_id = :owner AND kind = :kind")
                 .param("owner", ownerId)
+                .param("kind", kind)
                 .query(UUID.class)
                 .single();
     }
 
     List<Account> findByOwner(UUID ownerId) {
-        return jdbc.sql(COLUMNS + "WHERE owner_id = :owner ORDER BY created_at, id")
+        return jdbc.sql(COLUMNS + "WHERE owner_id = :owner AND kind IN ('CHECKING', 'VAULT') ORDER BY created_at, id")
                 .param("owner", ownerId)
                 .query(ACCOUNT)
                 .list();

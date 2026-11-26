@@ -31,6 +31,14 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
 
 ![Caixinhas rendendo com o CDI do Banco Central](docs/images/pc-caixinhas.png)
 
+## Investimentos
+
+![Gráfico do bitcoin com cotação real](docs/images/pc-ativo.png)
+
+## Crédito
+
+![Limite, faturas e compras parceladas](docs/images/pc-credito.png)
+
 ## O que já funciona
 
 - **Pix interno** com chaves, limite diário e noturno, e comprovante. Enviar duas vezes o mesmo pedido
@@ -38,6 +46,12 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
 - **Peixe-beta em WebGL puro.** Corpo e nadadeiras calculados na placa de vídeo, sem biblioteca 3D.
 - **Caixinhas com CDI real.** A taxa vem do Banco Central e o rendimento entra no razão a cada dia
   útil, sem perder fração de centavo e sem pagar o mesmo dia duas vezes.
+- **Crédito de verdade no razão.** O que o cliente deve é o saldo negativo de uma conta própria, e o
+  PostgreSQL recusa passar do limite. Fatura fecha dia 25 e vence dia 5, com compras parceladas.
+- **Converter limite em saldo**, com a taxa mostrada antes e cobrada só se for a mesma.
+- **Empréstimo pela tabela Price.** Quitar antes tira os juros dos meses que não chegaram.
+- **Investimentos com cotação real** de bitcoin, ethereum, solana, dólar e euro, com gráfico, custo
+  médio e notícias. Ordem recusada se o preço andar mais de 1% entre a tela e a execução.
 - **Carteira 3D.** Três cartões que giram, flutuam e viram, com bloqueio e troca do principal.
 - **Um app em três formatos**, instalável, com tema claro e botão para esconder valores.
 - **Razão contábil em partidas dobradas.** O próprio PostgreSQL recusa lançamento desbalanceado,
@@ -89,6 +103,14 @@ A API sobe em `http://localhost:8080`.
 | POST | `/api/v1/vaults/{id}/deposits` | Guardar (exige `Idempotency-Key`) |
 | POST | `/api/v1/vaults/{id}/withdrawals` | Resgatar (exige `Idempotency-Key`) |
 | DELETE | `/api/v1/vaults/{id}` | Excluir caixinha vazia |
+| POST | `/api/v1/cards/{id}/purchases` | Compra de teste no débito ou no crédito |
+| GET | `/api/v1/credit` | Limite e faturas |
+| POST | `/api/v1/credit/invoices/{mês}/payments` | Pagar fatura |
+| GET, POST | `/api/v1/credit/conversion(s)` | Taxa e conversão de limite em saldo |
+| GET, POST | `/api/v1/loans` | Oferta, contratação e parcelas |
+| POST | `/api/v1/loans/{id}/payments` | Pagar parcela ou quitar |
+| GET | `/api/v1/market`, `/market/{ativo}/history`, `/market/news` | Cotações, histórico e notícias |
+| GET, POST | `/api/v1/invest`, `/invest/buy`, `/invest/sell` | Carteira e ordens |
 | GET | `/.well-known/jwks.json` | Chave pública dos tokens |
 
 ## Andamento
@@ -98,8 +120,8 @@ A API sobe em `http://localhost:8080`.
 - [x] Pix interno e Rastro do dinheiro
 - [ ] Boleto, recarga e compras no cartão
 - [x] Caixinhas com CDI
-- [ ] Crédito e empréstimo
-- [ ] Investimentos e notícias
+- [x] Crédito, fatura, conversão de limite e empréstimo
+- [x] Investimentos e notícias
 - [ ] Antifraude em Go
 - [ ] Chat com IA e atendimento no WhatsApp
 - [ ] Bolhas, descontos, outros bancos e aproximação simulada

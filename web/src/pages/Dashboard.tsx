@@ -59,6 +59,14 @@ export function Dashboard() {
         </Link>
       )}
 
+      <nav className="shortcuts-row" aria-label="Atalhos">
+        <Link to="/app/extrato">Extrato</Link>
+        <Link to="/app/credito">Fatura e limite</Link>
+        <Link to="/app/investir">Investir</Link>
+        <Link to="/app/emprestimo">Empréstimo</Link>
+        <Link to="/app/caixinhas">Caixinhas</Link>
+      </nav>
+
       <section className="movements" aria-labelledby="movements-title">
         <div className="section-head">
           <div>

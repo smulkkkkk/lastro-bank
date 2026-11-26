@@ -13,6 +13,9 @@ import { Dashboard } from './pages/Dashboard'
 import { Landing } from './pages/Landing'
 import { Pix } from './pages/Pix'
 import { Profile } from './pages/Profile'
+import { Credit } from './pages/Credit'
+import { Invest } from './pages/Invest'
+import { Loan } from './pages/Loan'
 import { Statement } from './pages/Statement'
 import { Vaults } from './pages/Vaults'
 
@@ -30,6 +33,9 @@ createRoot(document.getElementById('root')!).render(
               <Route path="pix" element={<Pix />} />
               <Route path="cartoes" element={<Cards />} />
               <Route path="caixinhas" element={<Vaults />} />
+              <Route path="investir" element={<Invest />} />
+              <Route path="credito" element={<Credit />} />
+              <Route path="emprestimo" element={<Loan />} />
               <Route path="extrato" element={<Statement />} />
               <Route path="conta" element={<Profile />} />
             </Route>

@@ -155,6 +155,17 @@ try {
       const vault = await post('/vaults', { name, goalCents, lockedUntil }, auth)
       await post('/vaults/' + vault.id + '/deposits', { amountCents }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
+    const cards = await (await fetch('/api/v1/cards', { headers: auth })).json()
+    for (const [merchant, amountCents, mode, installments] of [['ANCORA', 129900, 'CREDIT', 6], ['FAROL', 8990, 'CREDIT', 1], ['ABISSAL', 4600, 'CREDIT', 1], ['MARE_CHEIA', 1850, 'DEBIT', 1]]) {
+      await post('/cards/' + cards[0].id + '/purchases', { merchant, amountCents, mode, installments, contactless: mode === 'DEBIT' }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
+    }
+    const quote = await (await fetch('/api/v1/loans/quote?amountCents=150000&installments=12', { headers: auth })).json()
+    await post('/loans', { amountCents: 150000, installments: 12, acceptedTotalCents: quote.totalCents }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
+    const market = await (await fetch('/api/v1/market', { headers: auth })).json()
+    const price = (code) => market.assets.find((a) => a.code === code).ask
+    for (const [asset, amountCents] of [['BTC', 25000], ['USD', 30000]]) {
+      await post('/invest/buy', { asset, amountCents, expectedPrice: price(asset) }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
+    }
     localStorage.setItem('lastro-sessao', '1')
   })()`)
 
@@ -166,7 +177,10 @@ try {
       ['painel', '/app', '.ballast-path'],
       ['pix', '/app/pix', '.pix-contacts'],
       ['caixinhas', '/app/caixinhas', '.tank'],
-      ['cartoes', '/app/cartoes', '.wallet'],
+      ['investir', '/app/investir', '.assets'],
+      ['credito', '/app/credito', '.invoice-items'],
+      ['emprestimo', '/app/emprestimo', '.installments'],
+      ['cartoes', '/app/cartoes', '.purchases li'],
       ['extrato', '/app/extrato', '.entry'],
       ['conta', '/app/conta', '.next'],
     ]) {
@@ -193,7 +207,7 @@ try {
 
   // O menor celular que o projeto promete atender.
   await viewport(360, 640, true)
-  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next']]) {
+  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next']]) {
     await open(path, ready)
     await checkWidth(`360px ${path}`)
   }
@@ -235,6 +249,13 @@ try {
   })()`)
   if (new Set([behaviour.first, behaviour.second, behaviour.third]).size !== 3) problems.push('carteira não trocou: ' + JSON.stringify(behaviour))
   if (behaviour.frozen !== 1) problems.push('bloqueio não apareceu no cartão')
+  // Gráfico de um ativo aberto, com o histórico real.
+  await open('/app/investir', '.asset-card')
+  await run(`[...document.querySelectorAll('button.asset-card')].find((b) => b.textContent.includes('Bitcoin')).click()`)
+  for (let i = 0; i < 40 && !(await run(`!!document.querySelector('.price-line')`)); i++) await wait(250)
+  if (!(await run(`!!document.querySelector('.price-line')`))) problems.push('o gráfico do bitcoin não apareceu')
+  await save('pc-ativo.png', await shot())
+
   // Pix pela tela, do contato até o comprovante. Dois cliques em enviar não mandam duas vezes.
   await run(`localStorage.removeItem('lastro-ocultar')`)
   await open('/app/pix', '.pix-contacts button')

@@ -119,6 +119,152 @@ export interface VaultOverview {
   items: Vault[]
 }
 
+export interface Merchant {
+  code: string
+  name: string
+  category: string
+}
+
+export interface Purchase {
+  id: string
+  cardId: string | null
+  kind: 'PURCHASE' | 'CONVERSION'
+  mode: 'DEBIT' | 'CREDIT'
+  merchant: string
+  category: string
+  amountCents: number
+  installments: number
+  contactless: boolean
+  createdAt: string
+}
+
+export interface Invoice {
+  reference: string
+  closesOn: string
+  dueOn: string
+  status: 'OPEN' | 'CLOSED' | 'OVERDUE' | 'PAID' | 'FUTURE'
+  totalCents: number
+  paidCents: number
+  remainingCents: number
+}
+
+export interface InvoiceItem {
+  purchaseId: string
+  merchant: string
+  category: string
+  number: number
+  installments: number
+  amountCents: number
+  createdAt: string
+}
+
+export interface CreditOverview {
+  limitCents: number
+  usedCents: number
+  availableCents: number
+  blocked: boolean
+  invoices: Invoice[]
+}
+
+export interface ConversionQuote {
+  amountCents: number
+  installments: number
+  feeCents: number
+  totalCents: number
+  firstInstallmentCents: number
+  otherInstallmentsCents: number
+}
+
+export interface LoanQuote {
+  amountCents: number
+  installments: number
+  installmentCents: number
+  lastInstallmentCents: number
+  interestCents: number
+  totalCents: number
+  firstDueOn: string
+}
+
+export interface LoanInstallment {
+  number: number
+  dueOn: string
+  principalCents: number
+  interestCents: number
+  paidOn: string | null
+  paidCents: number | null
+  overdue: boolean
+}
+
+export interface Loan {
+  id: string
+  principalCents: number
+  monthlyPercent: number
+  createdOn: string
+  settledOn: string | null
+  nextCents: number | null
+  settleCents: number | null
+  installments: LoanInstallment[]
+}
+
+export interface LoanOverview {
+  offer: {
+    minCents: number
+    maxCents: number
+    minInstallments: number
+    maxInstallments: number
+    monthlyPercent: number
+    yearPercent: number
+  }
+  active: Loan | null
+}
+
+export interface MarketAsset {
+  code: string
+  name: string
+  category: string
+  risk: string
+  description: string
+  bid: number
+  ask: number
+  changePercent: number
+}
+
+export interface Market {
+  stale: boolean
+  updatedAt: string
+  assets: MarketAsset[]
+}
+
+export interface PricePoint {
+  day: string
+  price: number
+}
+
+export interface News {
+  title: string
+  link: string
+  source: string
+  publishedAt: string
+}
+
+export interface Trade {
+  id: string
+  asset: string
+  side: 'BUY' | 'SELL'
+  quantity: string
+  price: number
+  amountCents: number
+  createdAt: string
+}
+
+export interface Portfolio {
+  valueCents: number
+  costCents: number
+  resultCents: number
+  positions: { asset: string; name: string; quantity: string; costCents: number; valueCents: number; resultCents: number }[]
+  trades: Trade[]
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -275,6 +421,60 @@ export const moveVault = (id: string, way: 'deposits' | 'withdrawals', amountCen
   })
 
 export const deleteVault = (id: string) => call<void>(`/vaults/${id}`, { method: 'DELETE' })
+
+const withKey = (idempotencyKey: string, body: unknown): RequestInit => ({
+  method: 'POST',
+  headers: { 'Idempotency-Key': idempotencyKey },
+  body: JSON.stringify(body),
+})
+
+export const fetchMerchants = () => call<Merchant[]>('/merchants')
+
+export const fetchPurchases = () => call<Purchase[]>('/purchases')
+
+export const buy = (
+  cardId: string,
+  data: { merchant: string; amountCents: number; mode: 'DEBIT' | 'CREDIT'; installments: number; contactless: boolean },
+  idempotencyKey: string,
+) => call<Purchase>(`/cards/${cardId}/purchases`, withKey(idempotencyKey, data))
+
+export const fetchCredit = () => call<CreditOverview>('/credit')
+
+export const fetchInvoiceItems = (month: string) => call<InvoiceItem[]>(`/credit/invoices/${month}/items`)
+
+export const payInvoice = (month: string, amountCents: number, idempotencyKey: string) =>
+  call<CreditOverview>(`/credit/invoices/${month}/payments`, withKey(idempotencyKey, { amountCents }))
+
+export const fetchConversionQuote = (amountCents: number, installments: number) =>
+  call<ConversionQuote>(`/credit/conversion?amountCents=${amountCents}&installments=${installments}`)
+
+export const convertLimit = (amountCents: number, installments: number, acceptedTotalCents: number, idempotencyKey: string) =>
+  call<Purchase>('/credit/conversions', withKey(idempotencyKey, { amountCents, installments, acceptedTotalCents }))
+
+export const fetchLoans = () => call<LoanOverview>('/loans')
+
+export const fetchLoanQuote = (amountCents: number, installments: number) =>
+  call<LoanQuote>(`/loans/quote?amountCents=${amountCents}&installments=${installments}`)
+
+export const takeLoan = (amountCents: number, installments: number, acceptedTotalCents: number, idempotencyKey: string) =>
+  call<Loan>('/loans', withKey(idempotencyKey, { amountCents, installments, acceptedTotalCents }))
+
+export const payLoan = (id: string, kind: 'NEXT' | 'ALL', expectedCents: number, idempotencyKey: string) =>
+  call<Loan>(`/loans/${id}/payments`, withKey(idempotencyKey, { kind, expectedCents }))
+
+export const fetchMarket = () => call<Market>('/market')
+
+export const fetchHistory = (asset: string, days: number) => call<PricePoint[]>(`/market/${asset}/history?days=${days}`)
+
+export const fetchNews = () => call<News[]>('/market/news')
+
+export const fetchPortfolio = () => call<Portfolio>('/invest')
+
+export const buyAsset = (asset: string, amountCents: number, expectedPrice: number, idempotencyKey: string) =>
+  call<Trade>('/invest/buy', withKey(idempotencyKey, { asset, amountCents, expectedPrice }))
+
+export const sellAsset = (asset: string, amountCents: number | null, all: boolean, expectedPrice: number, idempotencyKey: string) =>
+  call<Trade>('/invest/sell', withKey(idempotencyKey, { asset, amountCents, all, expectedPrice }))
 
 export const fetchPixKeys = () => call<PixKey[]>('/pix/keys')
 

@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountService {
 
     static final long WELCOME_CENTS = 1_000_00;
+    static final long CREDIT_LIMIT_CENTS = 3_000_00;
     static final long DAILY_DEPOSIT_LIMIT_CENTS = 5_000_00;
 
     record Page(List<StatementLine> items, Long nextCursor) {
@@ -44,7 +45,8 @@ public class AccountService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void openChecking(UUID ownerId) {
         UUID accountId = UUID.randomUUID();
-        accounts.insert(accountId, ownerId, "CHECKING", AccountNumber.format(accounts.nextNumber()));
+        accounts.insert(accountId, ownerId, "CHECKING", AccountNumber.format(accounts.nextNumber()), 0);
+        accounts.insert(UUID.randomUUID(), ownerId, "CREDIT", "CR-" + accounts.nextNumber(), CREDIT_LIMIT_CENTS);
         cards.issueFor(accountId);
         ledger.post(Kind.WELCOME, "Saldo de boas-vindas", "welcome:" + accountId, List.of(
                 Posting.debit(LedgerService.FUNDING_ACCOUNT, WELCOME_CENTS),
@@ -55,12 +57,24 @@ public class AccountService {
     @Transactional(propagation = Propagation.MANDATORY)
     public UUID openVault(UUID ownerId) {
         UUID accountId = UUID.randomUUID();
-        accounts.insert(accountId, ownerId, "VAULT", AccountNumber.format(accounts.nextNumber()));
+        accounts.insert(accountId, ownerId, "VAULT", AccountNumber.format(accounts.nextNumber()), 0);
         return accountId;
     }
 
     public UUID checkingId(UUID ownerId) {
-        return accounts.checkingId(ownerId);
+        return accounts.idByKind(ownerId, "CHECKING");
+    }
+
+    public UUID creditId(UUID ownerId) {
+        return accounts.idByKind(ownerId, "CREDIT");
+    }
+
+    /** Conta da dívida de um empréstimo; o limite dela é o valor emprestado. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public UUID openLoan(UUID ownerId, long principalCents) {
+        UUID accountId = UUID.randomUUID();
+        accounts.insert(accountId, ownerId, "LOAN", "EM-" + accounts.nextNumber(), principalCents);
+        return accountId;
     }
 
     List<Account> list(UUID ownerId) {

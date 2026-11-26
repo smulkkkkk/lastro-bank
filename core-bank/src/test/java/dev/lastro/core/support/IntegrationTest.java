@@ -91,7 +91,7 @@ public abstract class IntegrationTest {
         JsonNode created = body(register(email, randomCpf(), PASSWORD));
         MockHttpServletResponse login = login(email, PASSWORD);
         UUID userId = UUID.fromString(created.get("userId").asString());
-        UUID accountId = jdbc.sql("SELECT id FROM core.account WHERE owner_id = :id")
+        UUID accountId = jdbc.sql("SELECT id FROM core.account WHERE owner_id = :id AND kind = 'CHECKING'")
                 .param("id", userId).query(UUID.class).single();
         return new Customer(email, userId, accountId, body(login).get("accessToken").asString(),
                 login.getCookie("lastro_refresh"));
