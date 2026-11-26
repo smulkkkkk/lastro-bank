@@ -476,6 +476,21 @@ select option { background: var(--veil-solid); color: var(--text); }
 .chart-wait { height: 196px; display: grid; place-items: center; }
 .segmented button:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Análise */
+.pix-receipt[data-status='DENIED'] h2, .pix-receipt[data-status='CANCELLED'] h2 { color: var(--danger); }
+.pix-receipt[data-status='PENDING'] .pix-swim > path { stroke-dasharray: 6 8; }
+.receipt-detail { max-width: 46ch; margin: -8px 0 16px; color: var(--muted); }
+.reviews { display: grid; gap: 24px; max-width: 760px; }
+.reviews .section-head { margin: 0; justify-content: flex-start; align-items: baseline; gap: 6px 20px; }
+.review-list { display: grid; gap: 16px; }
+.review { display: grid; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--veil); }
+.review-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.review-amount { font-family: var(--wide); font-size: 1.375rem; letter-spacing: -0.04em; }
+.score { padding: 6px 12px; border-radius: 8px; background: #17161a; color: #f4f1f1; font-weight: 600; white-space: nowrap; }
+.score[data-level='high'] { background: var(--danger); }
+.reasons { display: grid; gap: 4px; }
+.reasons strong { display: inline-block; min-width: 3ch; color: var(--accent); }
+
 /* Rastro */
 .trace { width: min(100% - 32px, 620px); }
 .trace-entry { display: flex; justify-content: space-between; gap: 16px; margin: 16px 0 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }

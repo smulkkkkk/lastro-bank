@@ -34,6 +34,7 @@ class SecurityConfig {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health").permitAll()
+                        .requestMatchers("/api/v1/backoffice/**").hasRole("ANALYST")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(server -> server
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(roleConverter()))

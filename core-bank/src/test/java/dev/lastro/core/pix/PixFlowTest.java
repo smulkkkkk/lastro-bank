@@ -1,10 +1,14 @@
 package dev.lastro.core.pix;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import dev.lastro.core.pix.SentinelClient.Analysis;
+import dev.lastro.core.pix.SentinelClient.AnalysisRequest;
+import dev.lastro.core.pix.SentinelClient.Decision;
 import dev.lastro.core.support.IntegrationTest;
 import dev.lastro.core.support.TestClock;
 import java.time.LocalTime;
@@ -19,11 +23,17 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
 
+/** Pix com o sentinel aprovando tudo; o que o sentinel decide está em SentinelFlowTest. */
 class PixFlowTest extends IntegrationTest {
+
+    @MockitoBean private SentinelClient sentinel;
+    @Autowired private AnalysisWorker worker;
 
     private Customer ana;
     private Customer bia;
@@ -31,33 +41,39 @@ class PixFlowTest extends IntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        when(sentinel.analyze(any())).thenAnswer(call ->
+                new Analysis(call.<AnalysisRequest>getArgument(0).transferId(), 0, Decision.APPROVED, List.of()));
         ana = newCustomer();
         bia = newCustomer();
         biaKey = newKey(bia, "EMAIL");
     }
 
     @Test
-    void moneyMovesAndEachSideReadsItsOwnDescription() throws Exception {
+    void moneyMovesAfterAnalysisAndEachSideReadsItsOwnDescription() throws Exception {
         var response = send(ana, biaKey, 250_00, "almoço", id());
         assertThat(response.getStatus()).isEqualTo(200);
         JsonNode receipt = body(response);
+        assertThat(receipt.get("status").asString()).isEqualTo("PENDING");
         assertThat(receipt.get("recipientName").asString()).isEqualTo("Cliente Teste");
-        assertThat(receipt.get("message").asString()).isEqualTo("almoço");
+        assertThat(balance(ana)).as("reservado, ainda não saiu").isEqualTo(1_000_00);
+        assertThat(held(ana)).isEqualTo(250_00);
 
+        settle();
+        assertThat(status(ana, receipt)).isEqualTo("SETTLED");
         assertThat(balance(ana)).isEqualTo(750_00);
+        assertThat(held(ana)).isZero();
         assertThat(balance(bia)).isEqualTo(1_250_00);
         assertThat(lastEntry(ana).get("description").asString()).isEqualTo("Pix para Cliente Teste");
         assertThat(lastEntry(bia).get("description").asString()).isEqualTo("Pix de Cliente Teste");
-        assertThat(lastEntry(ana).get("kind").asString()).isEqualTo("TRANSFER");
     }
 
     @Test
     void simultaneousEqualTransfersMoveMoneyOnce() throws Exception {
         String id = id();
         List<JsonNode> receipts = contend(ana.accountId(), 8, () -> body(send(ana, biaKey, 100_00, null, id)));
-
         assertThat(receipts).allMatch(receipt -> receipt.has("id"));
         assertThat(new HashSet<>(receipts)).hasSize(1);
+        settle();
         assertThat(balance(ana)).isEqualTo(900_00);
     }
 
@@ -67,6 +83,7 @@ class PixFlowTest extends IntegrationTest {
         send(ana, biaKey, 100_00, "um", id);
         assertThat(code(send(ana, biaKey, 100_01, "um", id))).isEqualTo("idempotency.mismatch");
         assertThat(code(send(ana, biaKey, 100_00, "dois", id))).isEqualTo("idempotency.mismatch");
+        settle();
         assertThat(balance(ana)).isEqualTo(900_00);
     }
 
@@ -77,16 +94,19 @@ class PixFlowTest extends IntegrationTest {
         deleteKeys(bia);
         assertThat(body(send(ana, biaKey, 10_00, null, id))).isEqualTo(first);
         assertThat(code(send(ana, biaKey, 10_00, null, id()))).isEqualTo("pix.key_not_found");
+        settle();
         assertThat(balance(ana)).isEqualTo(990_00);
     }
 
     @Test
-    void balanceIsNotSpentTwice() throws Exception {
-        List<Integer> statuses = contend(ana.accountId(), 8,
-                () -> send(ana, biaKey, 300_00, null, id()).getStatus());
+    void reservedMoneyIsNotSpentTwice() throws Exception {
+        List<Integer> statuses = contend(ana.accountId(), 8, () -> send(ana, biaKey, 300_00, null, id()).getStatus());
         assertThat(statuses.stream().filter(s -> s == 200)).hasSize(3);
         assertThat(statuses.stream().filter(s -> s == 422)).hasSize(5);
+        assertThat(held(ana)).isEqualTo(900_00);
+        settle();
         assertThat(balance(ana)).isEqualTo(100_00);
+        assertThat(held(ana)).isZero();
     }
 
     @Test
@@ -103,15 +123,16 @@ class PixFlowTest extends IntegrationTest {
                 assertThat(result.get(60, TimeUnit.SECONDS)).isEqualTo(200);
             }
         }
+        settle();
+        settle();
         assertThat(balance(ana)).isEqualTo(1_000_00);
         assertThat(balance(bia)).isEqualTo(1_000_00);
     }
 
     @Test
-    void dayLimitHoldsUnderConcurrency() throws Exception {
+    void dayLimitCountsWhatIsWaitingForAnalysis() throws Exception {
         deposit(ana, ana.accountId(), id(), "500000");
-        List<Integer> statuses = contend(ana.accountId(), 8,
-                () -> send(ana, biaKey, 900_00, null, id()).getStatus());
+        List<Integer> statuses = contend(ana.accountId(), 8, () -> send(ana, biaKey, 900_00, null, id()).getStatus());
         assertThat(statuses.stream().filter(s -> s == 200)).hasSize(5);
         assertThat(code(send(ana, biaKey, 500_01, null, id()))).isEqualTo("pix.limit");
         assertThat(send(ana, biaKey, 500_00, null, id()).getStatus()).isEqualTo(200);
@@ -171,7 +192,7 @@ class PixFlowTest extends IntegrationTest {
         assertThat(code(lookup(ana, own))).isEqualTo("pix.self");
         assertThat(code(send(ana, "nada@teste.dev", 1_00, null, id()))).isEqualTo("pix.key_not_found");
         assertThat(code(send(ana, biaKey, 1_000_01, null, id()))).isEqualTo("ledger.insufficient_funds");
-        assertThat(balance(ana)).isEqualTo(1_000_00);
+        assertThat(held(ana)).isZero();
     }
 
     @Test
@@ -181,7 +202,7 @@ class PixFlowTest extends IntegrationTest {
         assertThat(send(ana, " ", 100, null, id()).getStatus()).isEqualTo(400);
         assertThat(send(ana, biaKey, 100, "x".repeat(81), id()).getStatus()).isEqualTo(400);
         assertThat(send(ana, biaKey, 100, null, "curta").getStatus()).isEqualTo(400);
-        assertThat(balance(ana)).isEqualTo(1_000_00);
+        assertThat(held(ana)).isZero();
     }
 
     @Test
@@ -201,14 +222,33 @@ class PixFlowTest extends IntegrationTest {
     }
 
     @Test
-    void contactsShowEachPersonOnce() throws Exception {
+    void contactsShowEachPersonOnceOnlyAfterTheMoneyArrived() throws Exception {
         send(ana, biaKey, 1_00, null, id());
+        assertThat(get("/api/v1/pix/contacts", ana).size()).as("ainda em análise").isZero();
         send(ana, newKey(bia, "RANDOM"), 1_00, null, id());
         Customer caio = newCustomer();
         send(ana, newKey(caio, "EMAIL"), 1_00, null, id());
+        settle();
         assertThat(get("/api/v1/pix/contacts", ana).size()).isEqualTo(2);
         deleteKeys(caio);
         assertThat(get("/api/v1/pix/contacts", ana).size()).isEqualTo(1);
+    }
+
+    @Test
+    void onlyTheSenderSeesTheStatus() throws Exception {
+        JsonNode receipt = body(send(ana, biaKey, 1_00, null, id()));
+        var peek = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .get("/api/v1/pix/transfers/" + receipt.get("id").asString()).header("Authorization", bia.bearer()))
+                .andReturn().getResponse();
+        assertThat(peek.getStatus()).isEqualTo(404);
+    }
+
+    private void settle() {
+        worker.runOnce();
+    }
+
+    private String status(Customer customer, JsonNode receipt) throws Exception {
+        return get("/api/v1/pix/transfers/" + receipt.get("id").asString(), customer).get("status").asString();
     }
 
     private JsonNode limits() throws Exception {
@@ -267,6 +307,11 @@ class PixFlowTest extends IntegrationTest {
 
     private long balance(Customer customer) {
         return jdbc.sql("SELECT balance_cents FROM core.account WHERE id = :id")
+                .param("id", customer.accountId()).query(Long.class).single();
+    }
+
+    private long held(Customer customer) {
+        return jdbc.sql("SELECT held_cents FROM core.account WHERE id = :id")
                 .param("id", customer.accountId()).query(Long.class).single();
     }
 

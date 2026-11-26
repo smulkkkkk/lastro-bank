@@ -15,3 +15,5 @@ bin/
 .project
 .settings/
 .claude/settings.local.json
+sentinel/bin/
+*.exe

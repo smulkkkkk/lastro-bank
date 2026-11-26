@@ -18,6 +18,25 @@ fictício.
 As imagens são geradas do app de verdade com `npm run capturas`, que também confere se alguma tela
 vaza em 360 px, celular, tablet e PC.
 
+## Como um Pix passa pelos dois serviços
+
+```text
+Site ──► core-bank (Java)                       sentinel (Go)
+          │ reserva o valor e grava o pedido
+          │ na outbox, na mesma transação
+          │
+          └─ worker ── POST assinado (HMAC) ──► regras de risco
+                     ◄── nota, decisão, motivos ┘
+          aprova: lança no razão
+          recusa: devolve a reserva
+          revisão: espera um analista (até 24 h)
+```
+
+- O Go nunca mexe em dinheiro e não tem permissão no schema do Java; o teste prova isso no banco.
+- Sentinel fora do ar: o Pix espera, o worker tenta de novo com espera crescente e cancela em 10 minutos.
+- Resposta atrasada não ressuscita Pix já cancelado. Analista não decide Pix em que é parte.
+- Os dois lados testam os mesmos arquivos de exemplo em [contracts/](contracts/README.md), inclusive a assinatura.
+
 ## Rastro
 
 Toque em um lançamento e veja **de onde veio aquele dinheiro**, centavo por centavo. Como o razão
@@ -66,10 +85,12 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
 
 ## Rodar
 
-Precisa do JDK 25 e do Node 22.12 ou mais novo. O PostgreSQL vem embutido, sem Docker.
+Precisa do JDK 25, do Go 1.27 e do Node 22.12 ou mais novo. O PostgreSQL vem embutido, sem Docker.
 
 No Windows, dê dois cliques em `iniciar.cmd`: ele sobe a API e o site e abre
 `http://localhost:5173`.
+
+Para ver a fila do analista, crie uma conta com o e-mail `analista@lastro.dev`.
 
 Para rodar só a API e os testes dela:
 
@@ -122,7 +143,7 @@ A API sobe em `http://localhost:8080`.
 - [x] Caixinhas com CDI
 - [x] Crédito, fatura, conversão de limite e empréstimo
 - [x] Investimentos e notícias
-- [ ] Antifraude em Go
+- [x] Antifraude em Go, com revisão por analista
 - [ ] Chat com IA e atendimento no WhatsApp
 - [ ] Bolhas, descontos, outros bancos e aproximação simulada
 - [ ] Docker, CI e publicação

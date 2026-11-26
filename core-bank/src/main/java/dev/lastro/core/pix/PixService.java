@@ -1,8 +1,7 @@
 package dev.lastro.core.pix;
 
 import dev.lastro.core.ledger.LedgerService;
-import dev.lastro.core.ledger.LedgerService.Kind;
-import dev.lastro.core.ledger.Posting;
+import dev.lastro.core.ledger.LedgerService.LockedAccount;
 import dev.lastro.core.pix.PixRepository.Contact;
 import dev.lastro.core.pix.PixRepository.Holder;
 import dev.lastro.core.pix.PixRepository.Key;
@@ -16,6 +15,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -91,7 +91,7 @@ class PixService {
     Recipient lookup(UUID ownerId, String rawKey) {
         rateLimiter.check("pix-lookup:" + ownerId, LOOKUPS_PER_MINUTE);
         String key = normalize(rawKey);
-        Holder recipient = recipient(key);
+        Holder recipient = pix.findByKey(key).orElseThrow(PixService::unknownKey);
         rejectSelf(pix.holder(ownerId), recipient);
         return new Recipient(key, recipient.name(), "***." + recipient.cpf().substring(3, 6) + "."
                 + recipient.cpf().substring(6, 9) + "-**");
@@ -106,18 +106,27 @@ class PixService {
         return pix.contacts(pix.holder(ownerId).accountId());
     }
 
+    Receipt status(UUID ownerId, UUID transferId) {
+        return pix.findTransfer(transferId, pix.holder(ownerId).accountId(), true)
+                .orElseThrow(() -> ApiException.notFound("pix.not_found", "Pix não encontrado."));
+    }
+
+    /**
+     * Reserva o valor e pede análise. O dinheiro só sai de verdade quando o sentinel aprovar; até lá
+     * o cliente vê "em análise" e a parte reservada não pode ser gasta em outra coisa.
+     */
     @Transactional
     public Receipt transfer(UUID ownerId, String rawKey, long amountCents, String rawMessage, String idempotencyKey) {
         rateLimiter.check("pix-transfer:" + ownerId, TRANSFERS_PER_MINUTE);
         String key = normalize(rawKey);
         String message = rawMessage == null || rawMessage.isBlank() ? null : rawMessage.strip();
         Holder sender = pix.holder(ownerId);
-
         Optional<Holder> found = pix.findByKey(key);
 
         // As duas contas de uma vez: travar só quem paga e depois quem recebe daria deadlock em
         // transferências cruzadas.
-        ledger.lock(Stream.concat(Stream.of(sender), found.stream()).map(Holder::accountId).toList());
+        Map<UUID, LockedAccount> locked =
+                ledger.lock(Stream.concat(Stream.of(sender), found.stream()).map(Holder::accountId).toList());
 
         // Repetição vem antes da chave: o comprovante continua valendo se quem recebeu apagou a dela.
         Optional<Receipt> previous = pix.findTransfer(sender.accountId(), idempotencyKey);
@@ -137,11 +146,12 @@ class PixService {
         if (amountCents > available(pix.usage(sender.accountId(), now))) {
             throw ApiException.unprocessable("pix.limit", "Este valor passa do seu limite de Pix agora.");
         }
-        UUID transactionId = ledger.post(Kind.TRANSFER, "Pix", null, List.of(
-                Posting.debit(sender.accountId(), amountCents, "Pix para " + recipient.name()),
-                Posting.credit(recipient.accountId(), amountCents, "Pix de " + sender.name())));
-        Receipt receipt = new Receipt(UUID.randomUUID(), key, recipient.name(), amountCents, message, now);
-        pix.insertTransfer(receipt, sender.accountId(), recipient.accountId(), idempotencyKey, transactionId);
+        if (locked.get(sender.accountId()).availableCents() < amountCents) {
+            throw ApiException.unprocessable("ledger.insufficient_funds", "Saldo insuficiente.");
+        }
+        pix.hold(sender.accountId(), amountCents);
+        Receipt receipt = new Receipt(UUID.randomUUID(), key, recipient.name(), amountCents, message, now, "PENDING");
+        pix.insertPending(receipt, sender.accountId(), recipient.accountId(), idempotencyKey);
         return receipt;
     }
 
@@ -149,10 +159,6 @@ class PixService {
         String key = raw.strip().toLowerCase(Locale.ROOT);
         String digits = key.replaceAll("[.\\-\\s]", "");
         return digits.matches("[0-9]{11}") ? digits : key;
-    }
-
-    private Holder recipient(String key) {
-        return pix.findByKey(key).orElseThrow(PixService::unknownKey);
     }
 
     private static ApiException unknownKey() {

@@ -83,6 +83,11 @@ class PixController {
         return pix.contacts(ownerId(user));
     }
 
+    @GetMapping("/transfers/{id}")
+    Receipt status(@PathVariable UUID id, @AuthenticationPrincipal Jwt user) {
+        return pix.status(ownerId(user), id);
+    }
+
     @PostMapping("/transfers")
     Receipt transfer(
             @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,64}") String idempotencyKey,

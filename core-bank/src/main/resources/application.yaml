@@ -36,6 +36,11 @@ logging:
       console: ecs
 
 lastro:
+  sentinel:
+    url: ${LASTRO_SENTINEL_URL:http://127.0.0.1:8081}
+    # O mesmo SENTINEL_SECRET do serviço em Go; sem ele a aplicação não sobe.
+    secret: ${LASTRO_SENTINEL_SECRET:}
+    worker: ${LASTRO_SENTINEL_WORKER:true}
   cdi:
     # Busca o CDI no Banco Central e paga o rendimento das caixinhas
     schedule: ${LASTRO_CDI_SCHEDULE:true}

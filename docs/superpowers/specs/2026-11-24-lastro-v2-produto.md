@@ -37,7 +37,7 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Empréstimo | Simulação com parcelas e custo total, dinheiro fictício | 6 ✅ |
 | Investir, bitcoin e moedas | Cotações públicas, compra e venda simuladas | 7 ✅ |
 | Notícias | Feed de fonte pública, sempre com link para a origem | 7 ✅ |
-| Antifraude em Go | Como na especificação base | 8 |
+| Antifraude em Go | Como na especificação base, com tela do analista | 8 ✅ |
 | Chat com IA | Assistente que responde e explica, sem poder mover dinheiro | 9 |
 | WhatsApp pelo n8n | Webhook que abre atendimento humano | 9 |
 | Bolhas e descontos em lojas | Cashback na moeda do app e lojas parceiras fictícias | 10 |
@@ -45,11 +45,10 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Aproximação por celular e relógio | Simulação animada | 10 |
 | Imagens para o GitHub | Capturas geradas por script | 4 ✅ |
 
-## Pix até o antifraude existir
+## Pix com antifraude
 
-A especificação base exige análise antes de aprovar. Como o serviço em Go vem só na etapa 8, até lá o
-Pix é liquidado na hora, protegido por saldo, limite diário de R$ 5.000,00 e noturno de R$ 2.000,00.
-A etapa 8 coloca a reserva e a análise no meio do caminho.
+Desde a etapa 8 o Pix segue a seção 5 da especificação base: reserva, outbox, análise no sentinel e
+decisão. Notificações ao vivo ainda não existem; o site acompanha o estado consultando a API.
 
 ## Como a caixinha rende
 

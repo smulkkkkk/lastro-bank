@@ -1,0 +1,8 @@
+{
+  "transferId": "6f1b2a4e-1c0d-4f7e-9a3b-2d5c8e7f9a10",
+  "accountId": "0b8c3e1a-7d42-4c1f-8e6a-5f9d2b4c7e31",
+  "recipientAccountId": "9d4e7f2a-3b1c-4e8d-a6f5-1c2b3d4e5f60",
+  "amountCents": 90000,
+  "accountCreatedAt": "2026-11-25T12:00:00Z",
+  "requestedAt": "2026-11-25T23:30:00Z"
+}

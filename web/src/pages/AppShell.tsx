@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, NavLink, Outlet, useOutletContext } from 'react-router'
 import { Alert, Brand, ThemeToggle } from '../components/ui'
 import { Lino } from '../components/Lino'
-import { fetchAccounts, fetchCards, updateCard, type Account, type Card, type CardChange } from '../lib/api'
+import { currentRole, fetchAccounts, fetchCards, updateCard, type Account, type Card, type CardChange } from '../lib/api'
 import { PrivacyToggle } from '../lib/privacy'
 import { messageOf, useSession } from '../lib/session'
 
@@ -23,6 +23,7 @@ const ICONS = {
   invest: 'M4 19l5-6 4 3 7-9M15 7h5v5',
   cards: 'M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10.500h18',
   statement: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9.500 8h5M9.500 12h5',
+  review: 'M12 3l8 3v6c0 4.500-3.500 8-8 9-4.500-1-8-4.500-8-9V6zM9 12l2 2 4-4',
   profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.500 21a7.500 7.500 0 0 1 15 0',
 }
 
@@ -89,7 +90,7 @@ export function AppShell() {
       </header>
       <nav className="app-nav" aria-label="Principal">
         <Brand to="/app" />
-        {PLACES.map((place) => (
+        {[...PLACES, ...(currentRole() === 'ANALYST' ? [{ to: '/app/analise', label: 'Análise', icon: ICONS.review }] : [])].map((place) => (
           <NavLink key={place.to} to={place.to} end={place.to === '/app'} data-place={place.to.split('/').pop()}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d={place.icon} />

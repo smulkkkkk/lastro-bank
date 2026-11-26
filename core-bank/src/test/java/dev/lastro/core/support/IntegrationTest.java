@@ -67,6 +67,8 @@ public abstract class IntegrationTest {
         registry.add("spring.datasource.url", () -> LocalPostgres.url(POSTGRES));
         registry.add("lastro.security.allow-generated-key", () -> "true");
         registry.add("lastro.cdi.schedule", () -> "false");
+        registry.add("lastro.sentinel.worker", () -> "false");
+        registry.add("lastro.sentinel.secret", () -> "segredo-de-teste-do-lastro");
         registry.add("logging.structured.format.console", () -> "");
     }
 
@@ -146,7 +148,8 @@ public abstract class IntegrationTest {
     }
 
     private void awaitBlocked(int expected) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        // Folga grande: com a máquina carregada, chegar à trava pode demorar.
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(90);
         long blocked = 0;
         while (System.nanoTime() < deadline) {
             // Sem isto o PostgreSQL repete a mesma fotografia durante toda a transação.

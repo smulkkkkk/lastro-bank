@@ -94,6 +94,19 @@ export interface PixReceipt {
   amountCents: number
   message: string | null
   createdAt: string
+  status: PixStatus
+}
+
+export type PixStatus = 'PENDING' | 'UNDER_REVIEW' | 'SETTLED' | 'DENIED' | 'CANCELLED'
+
+export interface ReviewItem {
+  id: string
+  amountCents: number
+  createdAt: string
+  senderName: string
+  recipientName: string
+  score: number | null
+  reasons: { code: string; points: number; text: string }[]
 }
 
 export interface Cdi {
@@ -475,6 +488,24 @@ export const buyAsset = (asset: string, amountCents: number, expectedPrice: numb
 
 export const sellAsset = (asset: string, amountCents: number | null, all: boolean, expectedPrice: number, idempotencyKey: string) =>
   call<Trade>('/invest/sell', withKey(idempotencyKey, { asset, amountCents, all, expectedPrice }))
+
+export const fetchPixStatus = (id: string) => call<PixReceipt>(`/pix/transfers/${id}`)
+
+export const fetchReviews = () => call<ReviewItem[]>('/backoffice/reviews')
+
+export const decideReview = (id: string, decision: 'APPROVE' | 'DENY', reason: string) =>
+  call<void>(`/backoffice/reviews/${id}`, { method: 'POST', body: JSON.stringify({ decision, reason }) })
+
+/** Papel do token atual. Serve só para mostrar ou esconder telas; quem decide acesso é o servidor. */
+export function currentRole(): string | null {
+  const payload = accessToken?.split('.')[1]
+  if (!payload) return null
+  try {
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).role ?? null
+  } catch {
+    return null
+  }
+}
 
 export const fetchPixKeys = () => call<PixKey[]>('/pix/keys')
 

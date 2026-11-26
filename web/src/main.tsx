@@ -16,6 +16,7 @@ import { Profile } from './pages/Profile'
 import { Credit } from './pages/Credit'
 import { Invest } from './pages/Invest'
 import { Loan } from './pages/Loan'
+import { Reviews } from './pages/Reviews'
 import { Statement } from './pages/Statement'
 import { Vaults } from './pages/Vaults'
 
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="investir" element={<Invest />} />
               <Route path="credito" element={<Credit />} />
               <Route path="emprestimo" element={<Loan />} />
+              <Route path="analise" element={<Reviews />} />
               <Route path="extrato" element={<Statement />} />
               <Route path="conta" element={<Profile />} />
             </Route>

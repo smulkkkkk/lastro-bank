@@ -146,7 +146,8 @@ try {
       await post('/accounts/' + account.id + '/deposits', { amountCents }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
     // Cabe no limite noturno, para as capturas saírem a qualquer hora.
-    for (const [amountCents, message] of [[64000, 'aluguel'], [87000, 'viagem']]) {
+    // Abaixo de R$ 800: conta recém-criada mandando mais que isso vai para revisão do antifraude.
+    for (const [amountCents, message] of [[64000, 'aluguel'], [79000, 'viagem']]) {
       await post('/pix/transfers', { key: key.value, amountCents, message }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
     await post('/pix/keys', { kind: 'EMAIL' }, auth)
@@ -165,6 +166,12 @@ try {
     const price = (code) => market.assets.find((a) => a.code === code).ask
     for (const [asset, amountCents] of [['BTC', 25000], ['USD', 30000]]) {
       await post('/invest/buy', { asset, amountCents, expectedPrice: price(asset) }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
+    }
+    // Espera o antifraude decidir, para o extrato e o Rastro já terem os dois Pix.
+    for (let i = 0; i < 40; i++) {
+      const page = await (await fetch('/api/v1/accounts/' + account.id + '/statement', { headers: auth })).json()
+      if (page.items.filter((e) => e.kind === 'TRANSFER').length === 2) break
+      await new Promise((r) => setTimeout(r, 500))
     }
     localStorage.setItem('lastro-sessao', '1')
   })()`)
@@ -191,7 +198,7 @@ try {
       if (screen !== 'extrato' && screen !== 'conta') await save(`${name}.png`, shots[name])
     }
     await open('/app', '.entry-button')
-    await run(`[...document.querySelectorAll('.entry-button')].find((e) => e.textContent.includes('870,00')).click()`)
+    await run(`[...document.querySelectorAll('.entry-button')].find((e) => e.textContent.includes('790,00')).click()`)
     await wait(1800)
     await checkWidth(`${format}-rastro`)
     const origins = await run(`document.querySelectorAll('.trace-flow li').length`)

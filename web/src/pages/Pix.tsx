@@ -4,6 +4,7 @@ import { formatDate } from '../components/EntryRow'
 import { Alert, Field } from '../components/ui'
 import {
   createPixKey,
+  fetchPixStatus,
   deletePixKey,
   fetchPixContacts,
   fetchPixKeys,
@@ -235,12 +236,41 @@ function AmountStep({ recipient, available, limits, onBack, onSent }: AmountProp
   )
 }
 
-function ReceiptView({ receipt, onAgain }: { receipt: PixReceipt; onAgain: () => void }) {
+const STATUS_TEXT: Record<PixReceipt['status'], { title: string; detail: string }> = {
+  PENDING: { title: 'Pix em análise', detail: 'O antifraude está conferindo. Costuma levar segundos; o valor fica reservado.' },
+  UNDER_REVIEW: { title: 'Pix em revisão', detail: 'Uma pessoa vai conferir este Pix. O valor fica reservado até a decisão, no máximo por 24 horas.' },
+  SETTLED: { title: 'Pix enviado', detail: '' },
+  DENIED: { title: 'Pix não enviado', detail: 'A análise de segurança barrou este Pix. O valor voltou para o seu saldo.' },
+  CANCELLED: { title: 'Pix cancelado', detail: 'A análise não terminou a tempo. O valor voltou para o seu saldo.' },
+}
+
+function ReceiptView({ receipt: first, onAgain }: { receipt: PixReceipt; onAgain: () => void }) {
   const { money } = usePrivacy()
+  const { reload } = useBank()
   const title = useRef<HTMLHeadingElement>(null)
+  const [receipt, setReceipt] = useState(first)
   useEffect(() => title.current?.focus(), [])
+
+  // Acompanha a análise; para quando há decisão ou depois de um minuto.
+  useEffect(() => {
+    if (receipt.status !== 'PENDING') return
+    let tries = 0
+    const timer = setInterval(() => {
+      tries++
+      fetchPixStatus(receipt.id).then((next) => {
+        if (next.status !== 'PENDING') {
+          setReceipt(next)
+          void reload()
+        }
+      }, () => {})
+      if (tries >= 40) clearInterval(timer)
+    }, 1500)
+    return () => clearInterval(timer)
+  }, [receipt.id, receipt.status, reload])
+
+  const text = STATUS_TEXT[receipt.status]
   return (
-    <div className="pix-receipt">
+    <div className="pix-receipt" data-status={receipt.status}>
       <svg className="pix-swim" viewBox="0 0 320 90" aria-hidden="true">
         <path d="M6 64C70 8 130 92 190 44S288 22 314 34" />
         <g className="pix-fish">
@@ -249,10 +279,11 @@ function ReceiptView({ receipt, onAgain }: { receipt: PixReceipt; onAgain: () =>
           <circle className="pix-eye" cx="5" cy="-4" r="2.500" />
         </g>
       </svg>
-      <h2 ref={title} tabIndex={-1}>
-        Pix enviado
+      <h2 ref={title} tabIndex={-1} aria-live="polite">
+        {text.title}
       </h2>
       <p className="balance">{money(receipt.amountCents)}</p>
+      {text.detail && <p className="receipt-detail">{text.detail}</p>}
       <dl>
         <div>
           <dt>Para</dt>

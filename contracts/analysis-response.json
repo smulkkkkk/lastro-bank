@@ -1,0 +1,9 @@
+{
+  "transferId": "6f1b2a4e-1c0d-4f7e-9a3b-2d5c8e7f9a10",
+  "score": 50,
+  "decision": "REVIEW",
+  "reasons": [
+    { "code": "NEW_RECIPIENT", "points": 25, "text": "Primeira transferência para este destinatário, acima de R$ 500,00" },
+    { "code": "NEW_ACCOUNT", "points": 25, "text": "Conta com menos de 24 horas, acima de R$ 800,00" }
+  ]
+}

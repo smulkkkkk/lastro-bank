@@ -17,10 +17,11 @@ class UserRepository {
         this.jdbc = jdbc;
     }
 
-    void insert(UUID id, String fullName, String email, String cpf, String passwordHash) {
+    void insert(UUID id, String fullName, String email, String cpf, String passwordHash, String role) {
         jdbc.sql("""
-                        INSERT INTO core.app_user (id, full_name, email, cpf, password_hash)
-                        VALUES (:id, :name, :email, :cpf, :hash)""")
+                        INSERT INTO core.app_user (id, full_name, email, cpf, password_hash, role)
+                        VALUES (:id, :name, :email, :cpf, :hash, :role)""")
+                .param("role", role)
                 .param("id", id)
                 .param("name", fullName)
                 .param("email", email)

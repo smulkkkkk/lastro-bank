@@ -7,7 +7,7 @@ import { useBank } from './AppShell'
 
 const NEXT = [
   { title: 'Boleto, recarga e compras', items: 'Contas fictícias e histórico por cartão.' },
-  { title: 'Antifraude e suporte', items: 'Análise em Go, chat com o Lino e atendimento no WhatsApp.' },
+  { title: 'Avisos e suporte', items: 'Notificações ao vivo, chat com o Lino e atendimento no WhatsApp.' },
   { title: 'Bolhas e parceiros', items: 'Moeda do app, descontos, outros bancos e aproximação simulada.' },
 ]
 

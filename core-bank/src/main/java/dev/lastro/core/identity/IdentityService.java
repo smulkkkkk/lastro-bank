@@ -34,10 +34,14 @@ class IdentityService {
     private final SecurityProperties properties;
     private final TransactionTemplate transaction;
     private final String dummyHash;
+    private final String analystEmail;
 
     IdentityService(UserRepository users, RefreshTokenService refreshTokens, AccountService accounts,
             PasswordEncoder passwords, JwtEncoder jwtEncoder, SecurityProperties properties,
-            TransactionTemplate transaction) {
+            TransactionTemplate transaction,
+            @org.springframework.beans.factory.annotation.Value("${lastro.dev.analyst-email:}") String analystEmail) {
+        // Só para desenvolvimento: quem se cadastrar com este e-mail entra como analista.
+        this.analystEmail = analystEmail.strip().toLowerCase(Locale.ROOT);
         this.users = users;
         this.refreshTokens = refreshTokens;
         this.accounts = accounts;
@@ -58,7 +62,9 @@ class IdentityService {
         UUID userId = UUID.randomUUID();
         try {
             transaction.executeWithoutResult(status -> {
-                users.insert(userId, fullName.strip(), normalizeEmail(email), cpf, hash);
+                String normalized = normalizeEmail(email);
+                users.insert(userId, fullName.strip(), normalized, cpf, hash,
+                        !analystEmail.isEmpty() && analystEmail.equals(normalized) ? "ANALYST" : "CUSTOMER");
                 accounts.openChecking(userId);
             });
         } catch (DuplicateKeyException e) {
