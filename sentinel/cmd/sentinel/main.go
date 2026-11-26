@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/smulkkkkk/lastro-bank/sentinel/internal/api"
+	"github.com/smulkkkkk/lastro-bank/sentinel/internal/auth"
 	"github.com/smulkkkkk/lastro-bank/sentinel/internal/store"
 )
 
@@ -30,6 +31,7 @@ func run(log *slog.Logger) error {
 	}
 	url := env("SENTINEL_DB_URL", "postgres://lastro_sentinel@localhost:5433/lastro")
 	addr := env("SENTINEL_ADDR", "127.0.0.1:8081")
+	jwks := env("SENTINEL_JWKS_URL", "http://127.0.0.1:8080/.well-known/jwks.json")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -41,11 +43,13 @@ func run(log *slog.Logger) error {
 	defer db.Close()
 
 	server := &http.Server{
-		Addr:              addr,
-		Handler:           api.NewServer(db, []byte(secret), log).Routes(),
+		Addr: addr,
+		Handler: api.NewServer(db, []byte(secret), log).
+			EnableNotifications(db, auth.NewVerifier(jwks, "lastro-core", "lastro")).Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
+		// Sem WriteTimeout geral: o stream de avisos fica aberto e põe prazo em cada escrita.
+		IdleTimeout: 2 * time.Minute,
 	}
 	failed := make(chan error, 1)
 	go func() {

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, NavLink, Outlet, useOutletContext } from 'react-router'
 import { Alert, Brand, ThemeToggle } from '../components/ui'
 import { Lino } from '../components/Lino'
+import { HelpLink, NoticeBell, Toasts } from '../components/Notices'
+import { useNotices, type Notice } from '../lib/live'
 import { currentRole, fetchAccounts, fetchCards, updateCard, type Account, type Card, type CardChange } from '../lib/api'
 import { PrivacyToggle } from '../lib/privacy'
 import { messageOf, useSession } from '../lib/session'
@@ -37,6 +39,25 @@ const PLACES = [
   { to: '/app/extrato', label: 'Extrato', icon: ICONS.statement },
   { to: '/app/conta', label: 'Conta', icon: ICONS.profile },
 ]
+
+/** Avisos ao vivo. Só liga com a conta carregada, quando o token já existe. */
+function LiveTools({ reload }: { reload: () => Promise<void> }) {
+  const [toasts, setToasts] = useState<Notice[]>([])
+  const dismiss = useCallback((seq: number) => setToasts((current) => current.filter((n) => n.seq !== seq)), [])
+  const notices = useNotices((notice) => {
+    setToasts((current) => [...current, notice].slice(-3))
+    setTimeout(() => dismiss(notice.seq), 6000)
+    // Pix mexe no saldo: atualiza a tela sem o cliente precisar recarregar.
+    if (notice.kind.startsWith('PIX_')) void reload()
+  })
+  return (
+    <>
+      <HelpLink />
+      <NoticeBell items={notices.items} unread={notices.unread} online={notices.online} onOpen={notices.markAllRead} />
+      <Toasts items={toasts} onDismiss={dismiss} />
+    </>
+  )
+}
 
 export function AppShell() {
   const session = useSession()
@@ -84,6 +105,7 @@ export function AppShell() {
       <header className="app-top">
         <Brand to="/app" />
         <div className="app-tools">
+          {account && <LiveTools reload={reload} />}
           <PrivacyToggle />
           <ThemeToggle />
         </div>

@@ -93,12 +93,12 @@ func TestBadSignaturesAreRefusedBeforeReadingTheBody(t *testing.T) {
 func TestInvalidRequestsAreRefused(t *testing.T) {
 	h := server(NewMemoryStore(), now)
 	for name, payload := range map[string]string{
-		"campo a mais":       strings.Replace(body(id(1), id(900), 100, now), "{", `{"extra":1,`, 1),
-		"valor zero":         body(id(1), id(900), 0, now),
-		"para si mesmo":      body(id(1), account, 100, now),
-		"id que não é uuid":  body("abc", id(900), 100, now),
-		"conta do futuro":    strings.Replace(body(id(1), id(900), 100, now), "2026-01-01", "2027-01-01", 1),
-		"não é json":         "{",
+		"campo a mais":      strings.Replace(body(id(1), id(900), 100, now), "{", `{"extra":1,`, 1),
+		"valor zero":        body(id(1), id(900), 0, now),
+		"para si mesmo":     body(id(1), account, 100, now),
+		"id que não é uuid": body("abc", id(900), 100, now),
+		"conta do futuro":   strings.Replace(body(id(1), id(900), 100, now), "2026-01-01", "2027-01-01", 1),
+		"não é json":        "{",
 	} {
 		if r := post(t, h, payload, now, ""); r.Code != http.StatusBadRequest {
 			t.Errorf("%s: esperava 400, veio %d %s", name, r.Code, r.Body)

@@ -56,3 +56,4 @@ if exist "%ProgramFiles%\Mozilla Firefox\firefox.exe" (
 echo Pronto: http://localhost:5173
 echo Para desligar, feche as janelas "Lastro API", "Lastro antifraude" e "Lastro site".
 echo Para ver a tela do analista, crie uma conta com o e-mail analista@lastro.dev
+echo Para o Lino responder com IA, defina LASTRO_ANTHROPIC_API_KEY antes de rodar este arquivo.

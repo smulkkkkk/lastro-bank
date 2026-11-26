@@ -68,6 +68,8 @@ public abstract class IntegrationTest {
         registry.add("lastro.security.allow-generated-key", () -> "true");
         registry.add("lastro.cdi.schedule", () -> "false");
         registry.add("lastro.sentinel.worker", () -> "false");
+        registry.add("lastro.assistant.api-key", () -> "");
+        registry.add("lastro.helpdesk.n8n-webhook-url", () -> "");
         registry.add("lastro.sentinel.secret", () -> "segredo-de-teste-do-lastro");
         registry.add("logging.structured.format.console", () -> "");
     }

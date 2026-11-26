@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/smulkkkkk/lastro-bank/sentinel/internal/notify"
 	"github.com/smulkkkkk/lastro-bank/sentinel/internal/rules"
 )
 
@@ -33,6 +34,11 @@ type Server struct {
 	secret []byte
 	now    func() time.Time
 	log    *slog.Logger
+
+	notes  Notifications
+	tokens TokenVerifier
+	hub    *notify.Hub
+	ping   time.Duration
 }
 
 func NewServer(store Store, secret []byte, log *slog.Logger) *Server {
@@ -43,20 +49,29 @@ func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/analyses", s.analyze)
 	mux.HandleFunc("GET /healthz", s.health)
+	s.liveRoutes(mux)
 	return mux
+}
+
+// readSigned lê o corpo e confere a assinatura antes de qualquer leitura do conteúdo.
+func (s *Server) readSigned(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
+	if err != nil || len(body) > maxBody {
+		problem(w, http.StatusRequestEntityTooLarge, "request.too_large", "Corpo grande demais.")
+		return nil, false
+	}
+	if !Verify(s.secret, r.Header.Get("X-Lastro-Timestamp"), r.Header.Get("X-Lastro-Signature"), body, s.now()) {
+		s.log.Warn("assinatura recusada", "trace", r.Header.Get("X-Trace-Id"), "remote", r.RemoteAddr)
+		problem(w, http.StatusUnauthorized, "signature.invalid", "Assinatura inválida ou expirada.")
+		return nil, false
+	}
+	return body, true
 }
 
 func (s *Server) analyze(w http.ResponseWriter, r *http.Request) {
 	trace := r.Header.Get("X-Trace-Id")
-	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
-	if err != nil || len(body) > maxBody {
-		problem(w, http.StatusRequestEntityTooLarge, "request.too_large", "Corpo grande demais.")
-		return
-	}
-	// A assinatura vem antes de qualquer leitura do conteúdo.
-	if !Verify(s.secret, r.Header.Get("X-Lastro-Timestamp"), r.Header.Get("X-Lastro-Signature"), body, s.now()) {
-		s.log.Warn("assinatura recusada", "trace", trace, "remote", r.RemoteAddr)
-		problem(w, http.StatusUnauthorized, "signature.invalid", "Assinatura inválida ou expirada.")
+	body, ok := s.readSigned(w, r)
+	if !ok {
 		return
 	}
 

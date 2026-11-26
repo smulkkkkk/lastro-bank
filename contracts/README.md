@@ -26,3 +26,24 @@ A mesma `transferId` sempre devolve a mesma análise: repetir a chamada é segur
 | 0 a 39 | `APPROVED` |
 | 40 a 69 | `REVIEW` |
 | 70 ou mais | `DENIED` |
+
+## `POST /v1/events`
+
+Aviso para um cliente, como "Pix recebido". Corpo: [notification-event.json](notification-event.json),
+assinado do mesmo jeito que a análise. O sentinel guarda o aviso e manda na hora para o site do
+cliente, se ele estiver com o app aberto.
+
+- `kind`: `PIX_RECEIVED`, `PIX_SENT`, `PIX_REVIEW`, `PIX_DENIED`, `PIX_CANCELLED` ou `SUPPORT`.
+- `title` até 80 caracteres, `body` até 280. `link` é opcional e só pode apontar para dentro do app (`/app/...`).
+- O mesmo `id` mandado duas vezes vira um aviso só: o core-bank pode tentar de novo sem medo.
+
+## Avisos no site
+
+O site fala com o sentinel com o token de acesso do core-bank, que o sentinel confere pela chave
+pública em `/.well-known/jwks.json` (só RS256).
+
+| Rota | O que faz |
+|---|---|
+| `GET /v1/notifications` | Os 30 avisos mais recentes e quantos não foram lidos |
+| `POST /v1/notifications/read` | `{"upTo": seq}` marca como lido até ali |
+| `GET /v1/stream` | Server-Sent Events. `Last-Event-ID` reenvia o que chegou enquanto estava desconectado; fecha com `event: expired` quando o token vence |

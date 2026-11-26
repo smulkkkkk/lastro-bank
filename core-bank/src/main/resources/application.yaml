@@ -41,6 +41,14 @@ lastro:
     # O mesmo SENTINEL_SECRET do serviço em Go; sem ele a aplicação não sobe.
     secret: ${LASTRO_SENTINEL_SECRET:}
     worker: ${LASTRO_SENTINEL_WORKER:true}
+  assistant:
+    # Chave da API do Claude para o chat do Lino. Sem ela, o Lino responde com perguntas prontas.
+    api-key: ${LASTRO_ANTHROPIC_API_KEY:}
+    model: ${LASTRO_ASSISTANT_MODEL:claude-opus-5-5}
+  helpdesk:
+    # Webhook do n8n que abre o atendimento no WhatsApp. Sem ele, o protocolo fica só no banco.
+    n8n-webhook-url: ${LASTRO_N8N_WEBHOOK_URL:}
+    n8n-webhook-secret: ${LASTRO_N8N_WEBHOOK_SECRET:}
   cdi:
     # Busca o CDI no Banco Central e paga o rendimento das caixinhas
     schedule: ${LASTRO_CDI_SCHEDULE:true}

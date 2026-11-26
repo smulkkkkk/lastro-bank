@@ -3,6 +3,7 @@ package dev.lastro.core.pix;
 import dev.lastro.core.ledger.LedgerService;
 import dev.lastro.core.ledger.LedgerService.Kind;
 import dev.lastro.core.ledger.Posting;
+import dev.lastro.core.notify.Notifier;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -23,18 +24,21 @@ class PixSettlement {
 
     enum Outcome { SETTLED, DENIED, UNDER_REVIEW, CANCELLED }
 
-    private record Open(UUID from, UUID to, long amountCents, String status, String senderName, String recipientName) {
+    private record Open(UUID from, UUID to, long amountCents, String status, String senderName, String recipientName,
+            UUID senderId, UUID recipientId) {
     }
 
     private static final Set<String> WAITING = Set.of("PENDING", "UNDER_REVIEW");
 
     private final JdbcClient jdbc;
     private final LedgerService ledger;
+    private final Notifier notifier;
     private final Clock clock;
 
-    PixSettlement(JdbcClient jdbc, LedgerService ledger, Clock clock) {
+    PixSettlement(JdbcClient jdbc, LedgerService ledger, Notifier notifier, Clock clock) {
         this.jdbc = jdbc;
         this.ledger = ledger;
+        this.notifier = notifier;
         this.clock = clock;
     }
 
@@ -73,7 +77,27 @@ class PixSettlement {
                 .param("score", score).param("reasons", reasonsJson).param("id", transferId)
                 .update();
         dropQueue(transferId);
+        announce(open, outcome);
         return true;
+    }
+
+    /** Os avisos entram na mesma transação da decisão: só saem se ela confirmar. */
+    private void announce(Open open, Outcome outcome) {
+        String amount = Notifier.money(open.amountCents());
+        String to = amount + " para " + open.recipientName();
+        switch (outcome) {
+            case SETTLED -> {
+                notifier.send(open.senderId(), Notifier.Kind.PIX_SENT, "Pix enviado", to, "/app/extrato");
+                notifier.send(open.recipientId(), Notifier.Kind.PIX_RECEIVED, "Pix recebido",
+                        amount + " de " + open.senderName(), "/app/extrato");
+            }
+            case UNDER_REVIEW -> notifier.send(open.senderId(), Notifier.Kind.PIX_REVIEW, "Pix em revisão",
+                    to + ". Uma pessoa vai conferir; o valor fica reservado até a decisão.", "/app/pix");
+            case DENIED -> notifier.send(open.senderId(), Notifier.Kind.PIX_DENIED, "Pix não enviado",
+                    to + " foi barrado pela análise de segurança. O valor voltou para o seu saldo.", "/app/extrato");
+            case CANCELLED -> notifier.send(open.senderId(), Notifier.Kind.PIX_CANCELLED, "Pix cancelado",
+                    to + ": a análise não terminou a tempo. O valor voltou para o seu saldo.", "/app/extrato");
+        }
     }
 
     private void dropQueue(UUID transferId) {
@@ -83,15 +107,18 @@ class PixSettlement {
 
     private Optional<Open> load(UUID transferId, boolean lock) {
         return jdbc.sql("""
-                        SELECT p.from_account, p.to_account, p.amount_cents, p.status, p.recipient_name, u.full_name
+                        SELECT p.from_account, p.to_account, p.amount_cents, p.status, p.recipient_name, u.full_name,
+                               a.owner_id AS sender_id, b.owner_id AS recipient_id
                           FROM core.pix_transfer p
                           JOIN core.account a ON a.id = p.from_account
+                          JOIN core.account b ON b.id = p.to_account
                           JOIN core.app_user u ON u.id = a.owner_id
                          WHERE p.id = :id\s""" + (lock ? "FOR UPDATE OF p" : ""))
                 .param("id", transferId)
                 .query((rs, n) -> new Open(rs.getObject("from_account", UUID.class), rs.getObject("to_account", UUID.class),
                         rs.getLong("amount_cents"), rs.getString("status"), rs.getString("full_name"),
-                        rs.getString("recipient_name")))
+                        rs.getString("recipient_name"), rs.getObject("sender_id", UUID.class),
+                        rs.getObject("recipient_id", UUID.class)))
                 .optional();
     }
 

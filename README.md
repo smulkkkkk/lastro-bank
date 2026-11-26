@@ -58,6 +58,20 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
 
 ![Limite, faturas e compras parceladas](docs/images/pc-credito.png)
 
+## Avisos ao vivo e atendimento
+
+![Pix recebido aparecendo na hora](docs/images/pc-aviso.png)
+
+- Cada decisão de Pix grava o aviso na outbox, na mesma transação. Pix desfeito nunca avisa "recebido".
+- O Java entrega ao sentinel (Go), que guarda e manda ao site por Server-Sent Events. O token vai no
+  cabeçalho, conferido pela chave pública do core-bank (só RS256); caiu a conexão, o site reconecta e
+  recebe o que perdeu pelo `Last-Event-ID`.
+- O Lino responde no chat pela API do Claude, com os dados da conta só para leitura e sem poder mexer
+  em dinheiro. Sem chave, ou com a API fora do ar, responde com perguntas prontas.
+- "Falar com atendente" gera protocolo e manda o histórico ao webhook do n8n, que abre a conversa no WhatsApp.
+
+![Chat com o Lino](docs/images/pc-ajuda.png)
+
 ## O que já funciona
 
 - **Pix interno** com chaves, limite diário e noturno, e comprovante. Enviar duas vezes o mesmo pedido
@@ -91,6 +105,14 @@ No Windows, dê dois cliques em `iniciar.cmd`: ele sobe a API e o site e abre
 `http://localhost:5173`.
 
 Para ver a fila do analista, crie uma conta com o e-mail `analista@lastro.dev`.
+
+Opcional, antes de rodar o `iniciar.cmd` (as chaves ficam só na sua máquina, nunca no repositório):
+
+| Variável | Para quê |
+|---|---|
+| `LASTRO_ANTHROPIC_API_KEY` | O Lino responde com IA (Claude Opus 5.5). Sem ela, perguntas prontas |
+| `LASTRO_N8N_WEBHOOK_URL` | Webhook do n8n que abre o atendimento no WhatsApp (https, ou http em localhost) |
+| `LASTRO_N8N_WEBHOOK_SECRET` | Se definido, o pedido ao n8n vai assinado com HMAC, como entre os serviços |
 
 Para rodar só a API e os testes dela:
 
@@ -144,7 +166,7 @@ A API sobe em `http://localhost:8080`.
 - [x] Crédito, fatura, conversão de limite e empréstimo
 - [x] Investimentos e notícias
 - [x] Antifraude em Go, com revisão por analista
-- [ ] Chat com IA e atendimento no WhatsApp
+- [x] Avisos ao vivo, chat com IA e atendimento no WhatsApp
 - [ ] Bolhas, descontos, outros bancos e aproximação simulada
 - [ ] Docker, CI e publicação
 

@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,7 +31,7 @@ class AnalysisWorker {
     private static final int BATCH = 20;
     private static final Logger log = LoggerFactory.getLogger(AnalysisWorker.class);
 
-    private record Claim(UUID transferId, int attempts) {
+    private record Claim(UUID transferId, int attempts, OffsetDateTime createdAt) {
     }
 
     private final JdbcClient jdbc;
@@ -89,7 +90,11 @@ class AnalysisWorker {
         }
     }
 
-    /** SKIP LOCKED: várias instâncias rodando juntas nunca pegam o mesmo pedido. */
+    /**
+     * SKIP LOCKED: várias instâncias rodando juntas nunca pegam o mesmo pedido. O RETURNING não
+     * garante ordem, então a lista é ordenada aqui: dois Pix do mesmo lote são decididos na ordem em
+     * que foram feitos.
+     */
     private List<Claim> claim() {
         OffsetDateTime now = now();
         return jdbc.sql("""
@@ -98,10 +103,11 @@ class AnalysisWorker {
                                        WHERE kind = 'PIX_ANALYSIS' AND available_at <= :now
                                          AND (claimed_until IS NULL OR claimed_until < :now)
                                        ORDER BY created_at LIMIT :batch FOR UPDATE SKIP LOCKED)
-                        RETURNING aggregate_id, attempts""")
+                        RETURNING aggregate_id, attempts, created_at""")
                 .param("lease", now.plus(LEASE)).param("now", now).param("batch", BATCH)
-                .query((rs, n) -> new Claim(rs.getObject("aggregate_id", UUID.class), rs.getInt("attempts")))
-                .list();
+                .query((rs, n) -> new Claim(rs.getObject("aggregate_id", UUID.class), rs.getInt("attempts"),
+                        rs.getObject("created_at", OffsetDateTime.class)))
+                .list().stream().sorted(Comparator.comparing(Claim::createdAt)).toList();
     }
 
     /** Espera crescente, de 2 segundos até 1 minuto. */

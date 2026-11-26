@@ -1,5 +1,6 @@
 package dev.lastro.core.pix;
 
+import dev.lastro.core.shared.Hmac;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -7,13 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.HexFormat;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -72,14 +68,6 @@ class HttpSentinelClient implements SentinelClient {
     }
 
     String sign(String timestamp, byte[] body) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret, "HmacSHA256"));
-            mac.update(timestamp.getBytes(StandardCharsets.UTF_8));
-            mac.update((byte) '.');
-            return HexFormat.of().formatHex(mac.doFinal(body));
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new IllegalStateException(e);
-        }
+        return Hmac.sign(secret, timestamp, body);
     }
 }

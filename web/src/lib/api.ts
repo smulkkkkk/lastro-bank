@@ -371,6 +371,45 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return response.status === 204 ? (undefined as T) : response.json()
 }
 
+/**
+ * Para o sentinel (avisos ao vivo), atrás do proxy /live. Mesmo token de acesso, mandado no
+ * cabeçalho e nunca na URL; se vencer, renova uma vez e tenta de novo.
+ */
+export async function liveFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const attempt = () => {
+    const headers = new Headers(init.headers)
+    if (init.body) headers.set('Content-Type', 'application/json')
+    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+    return fetch(`/live${path}`, { ...init, headers, credentials: 'same-origin' })
+  }
+  let response = await attempt()
+  if (response.status === 401 && (await refresh())) response = await attempt()
+  return response
+}
+
+export interface HelpMessage {
+  id: number
+  role: 'USER' | 'ASSISTANT'
+  text: string
+  source: 'CLAUDE' | 'FAQ' | null
+  createdAt: string
+}
+
+export interface HelpConversation {
+  id: string | null
+  status: 'NEW' | 'OPEN' | 'HANDED_OFF'
+  protocol: string | null
+  messages: HelpMessage[]
+}
+
+export const fetchConversation = () => call<HelpConversation>('/help/conversation')
+
+export const sendHelpMessage = (text: string) =>
+  call<HelpConversation>('/help/messages', { method: 'POST', body: JSON.stringify({ text }) })
+
+export const askForPerson = (phone: string) =>
+  call<HelpConversation>('/help/handoff', { method: 'POST', body: JSON.stringify({ phone }) })
+
 export async function resumeSession(): Promise<boolean> {
   return hasHint() ? refresh() : false
 }

@@ -81,7 +81,8 @@ try {
   }
   const open = async (path, ready) => {
     await send('Page.navigate', { url: SITE + path })
-    for (let i = 0; i < 60; i++) {
+    // Até 30 s: em máquina com pouca memória a primeira carga demora.
+    for (let i = 0; i < 150; i++) {
       await wait(200)
       if (await run(`location.pathname === ${JSON.stringify(path)} && !!document.querySelector(${JSON.stringify(ready)})`)) {
         await run('document.fonts.ready.then(() => true)')
@@ -150,7 +151,10 @@ try {
     for (const [amountCents, message] of [[64000, 'aluguel'], [79000, 'viagem']]) {
       await post('/pix/transfers', { key: key.value, amountCents, message }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
-    await post('/pix/keys', { kind: 'EMAIL' }, auth)
+    const mine = await post('/pix/keys', { kind: 'EMAIL' }, auth)
+    // Para a captura do aviso ao vivo: a Marina manda um Pix com a tela aberta. Some no fim.
+    localStorage.setItem('capturas-amigo', JSON.stringify({ friend, key: mine.value }))
+    await post('/help/messages', { text: 'Meu Pix ficou em revisão, o que acontece agora?' }, auth)
     const later = new Date(Date.now() + 200 * 864e5).toISOString().slice(0, 10)
     for (const [name, goalCents, lockedUntil, amountCents] of [['Viagem', 80000, null, 52000], ['Reserva', 300000, later, 40000], ['Teclado novo', 45000, null, 9000]]) {
       const vault = await post('/vaults', { name, goalCents, lockedUntil }, auth)
@@ -190,6 +194,7 @@ try {
       ['cartoes', '/app/cartoes', '.purchases li'],
       ['extrato', '/app/extrato', '.entry'],
       ['conta', '/app/conta', '.next'],
+      ['ajuda', '/app/ajuda', '.bubble'],
     ]) {
       await open(path, ready)
       const name = `${format}-${screen}`
@@ -214,7 +219,7 @@ try {
 
   // O menor celular que o projeto promete atender.
   await viewport(360, 640, true)
-  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next']]) {
+  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble']]) {
     await open(path, ready)
     await checkWidth(`360px ${path}`)
   }
@@ -322,6 +327,26 @@ try {
   const leaked = await run(`(document.querySelector('.app').innerText.match(/R\\$\\s?\\d/g) || []).length`)
   if (leaked) problems.push(`valores visíveis com o olho fechado: ${leaked}`)
   await run(`localStorage.removeItem('lastro-ocultar')`)
+
+  // Aviso ao vivo: o Pix chega pelo sentinel e aparece sem recarregar a página.
+  await viewport(1440, 900)
+  await open('/app', '.ballast-path')
+  await wait(1500)
+  await run(`(async () => {
+    const { friend, key } = JSON.parse(localStorage.getItem('capturas-amigo'))
+    localStorage.removeItem('capturas-amigo')
+    await fetch('/api/v1/pix/transfers', { method: 'POST', headers: { 'Content-Type': 'application/json', ...friend, 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ key, amountCents: 15000, message: 'pizza' }) })
+  })()`)
+  let toast = false
+  for (let i = 0; i < 40 && !toast; i++) {
+    await wait(500)
+    toast = await run(`!!document.querySelector('.toast')`)
+  }
+  if (!toast) problems.push('o aviso do Pix recebido não apareceu ao vivo')
+  else await save('pc-aviso.png', await shot())
+  await run(`document.querySelector('.bell').click()`)
+  await wait(500)
+  await save('pc-avisos.png', await shot())
 
   // Capa e versão noturna.
   await viewport(1280, 640)

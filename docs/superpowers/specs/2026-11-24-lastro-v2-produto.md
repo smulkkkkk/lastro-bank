@@ -38,8 +38,9 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Investir, bitcoin e moedas | Cotações públicas, compra e venda simuladas | 7 ✅ |
 | Notícias | Feed de fonte pública, sempre com link para a origem | 7 ✅ |
 | Antifraude em Go | Como na especificação base, com tela do analista | 8 ✅ |
-| Chat com IA | Assistente que responde e explica, sem poder mover dinheiro | 9 |
-| WhatsApp pelo n8n | Webhook que abre atendimento humano | 9 |
+| Chat com IA | Assistente que responde e explica, sem poder mover dinheiro | 9 ✅ |
+| Avisos ao vivo | Outbox no Java, Server-Sent Events no Go | 9 ✅ |
+| WhatsApp pelo n8n | Webhook que abre atendimento humano | 9 ✅ |
 | Bolhas e descontos em lojas | Cashback na moeda do app e lojas parceiras fictícias | 10 |
 | Conectar outros bancos | Open Finance simulado, com consentimento e revogação | 10 |
 | Aproximação por celular e relógio | Simulação animada | 10 |
@@ -48,7 +49,7 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 ## Pix com antifraude
 
 Desde a etapa 8 o Pix segue a seção 5 da especificação base: reserva, outbox, análise no sentinel e
-decisão. Notificações ao vivo ainda não existem; o site acompanha o estado consultando a API.
+decisão. Desde a etapa 9 cada decisão também vira aviso ao vivo para quem enviou e para quem recebeu.
 
 ## Como a caixinha rende
 

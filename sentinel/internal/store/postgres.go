@@ -43,7 +43,7 @@ func Open(ctx context.Context, url string) (*Postgres, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := pool.Exec(ctx, schema); err != nil {
+	if _, err := pool.Exec(ctx, schema+notificationSchema); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("criar tabelas: %w", err)
 	}
