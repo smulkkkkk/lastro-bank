@@ -151,6 +151,12 @@ try {
     for (const [amountCents, message] of [[64000, 'aluguel'], [79000, 'viagem']]) {
       await post('/pix/transfers', { key: key.value, amountCents, message }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
+    // Espera o antifraude decidir, antes das caixinhas: o Rastro segue a ordem em que o dinheiro saiu.
+    for (let i = 0; i < 80; i++) {
+      const page = await (await fetch('/api/v1/accounts/' + account.id + '/statement', { headers: auth })).json()
+      if (page.items.filter((e) => e.kind === 'TRANSFER').length === 2) break
+      await new Promise((r) => setTimeout(r, 500))
+    }
     const mine = await post('/pix/keys', { kind: 'EMAIL' }, auth)
     // Para a captura do aviso ao vivo: a Marina manda um Pix com a tela aberta. Some no fim.
     localStorage.setItem('capturas-amigo', JSON.stringify({ friend, key: mine.value }))
@@ -170,12 +176,6 @@ try {
     const price = (code) => market.assets.find((a) => a.code === code).ask
     for (const [asset, amountCents] of [['BTC', 25000], ['USD', 30000]]) {
       await post('/invest/buy', { asset, amountCents, expectedPrice: price(asset) }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
-    }
-    // Espera o antifraude decidir, para o extrato e o Rastro já terem os dois Pix.
-    for (let i = 0; i < 40; i++) {
-      const page = await (await fetch('/api/v1/accounts/' + account.id + '/statement', { headers: auth })).json()
-      if (page.items.filter((e) => e.kind === 'TRANSFER').length === 2) break
-      await new Promise((r) => setTimeout(r, 500))
     }
     localStorage.setItem('lastro-sessao', '1')
   })()`)

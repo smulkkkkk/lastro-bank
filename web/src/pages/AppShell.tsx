@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Navigate, NavLink, Outlet, useOutletContext } from 'react-router'
+import { Navigate, NavLink, Outlet, useLocation, useOutletContext } from 'react-router'
 import { Alert, Brand, ThemeToggle } from '../components/ui'
 import { Lino } from '../components/Lino'
 import { HelpLink, NoticeBell, Toasts } from '../components/Notices'
@@ -17,7 +17,7 @@ interface BankContext {
 
 export const useBank = () => useOutletContext<BankContext>()
 
-const ICONS = {
+export const ICONS = {
   home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
   pix: 'M4 9h14l-4-4M20 15H6l4 4',
   vaults: 'M4 5v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5M4 11c3-2 5-2 8 0s5 2 8 0',
@@ -61,6 +61,7 @@ function LiveTools({ reload }: { reload: () => Promise<void> }) {
 
 export function AppShell() {
   const session = useSession()
+  const location = useLocation()
   const [account, setAccount] = useState<Account>()
   const [cards, setCards] = useState<Card[]>()
   const [error, setError] = useState('')
@@ -131,7 +132,10 @@ export function AppShell() {
             </button>
           </div>
         ) : account && cards ? (
-          <Outlet context={{ account, cards, reload, changeCard } satisfies BankContext} />
+          // A chave troca a cada tela: a nova entra com a transição de névoa.
+          <div className="page" key={location.pathname}>
+            <Outlet context={{ account, cards, reload, changeCard } satisfies BankContext} />
+          </div>
         ) : (
           <p className="state muted" role="status">
             Carregando sua conta…

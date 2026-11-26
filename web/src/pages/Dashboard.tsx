@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { BallastLine } from '../components/BallastLine'
 import { BankCard } from '../components/BankCard'
 import { DepositDialog } from '../components/DepositDialog'
+import { Tiles } from '../components/Tiles'
 import { TraceDialog } from '../components/TraceDialog'
 import { Alert } from '../components/ui'
 import { fetchStatement, type Entry } from '../lib/api'
@@ -59,13 +60,7 @@ export function Dashboard() {
         </Link>
       )}
 
-      <nav className="shortcuts-row" aria-label="Atalhos">
-        <Link to="/app/extrato">Extrato</Link>
-        <Link to="/app/credito">Fatura e limite</Link>
-        <Link to="/app/investir">Investir</Link>
-        <Link to="/app/emprestimo">Empréstimo</Link>
-        <Link to="/app/caixinhas">Caixinhas</Link>
-      </nav>
+      <Tiles />
 
       <section className="movements" aria-labelledby="movements-title">
         <div className="section-head">

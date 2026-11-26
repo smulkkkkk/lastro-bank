@@ -281,7 +281,9 @@ select option { background: var(--veil-solid); color: var(--text); }
 
 .dashboard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; align-items: center; }
 .floating-card { justify-self: center; }
-.summary { container-type: inline-size; }
+.summary { container-type: inline-size; position: relative; isolation: isolate; }
+/* Um brilho de brasa atrás do saldo, como luz no meio da névoa. */
+.dashboard > .summary::before { content: ""; position: absolute; z-index: -1; inset: -40px auto auto -60px; width: min(420px, 90vw); aspect-ratio: 1.6; border-radius: 50%; background: radial-gradient(closest-side, rgb(240 83 28 / 0.22), transparent); filter: blur(30px); pointer-events: none; }
 .balance-label { font-family: inherit; font-size: 1rem; letter-spacing: 0; }
 .balance { margin: 8px 0 24px; font-family: var(--wide); font-size: clamp(1.25rem, 8.6cqw, 2.875rem); line-height: 1.2; letter-spacing: -0.05em; white-space: nowrap; }
 .summary .muted { margin: -14px 0 24px; }
@@ -429,9 +431,60 @@ select option { background: var(--veil-solid); color: var(--text); }
 .loan-active { display: grid; gap: 20px; }
 .loan-active .summary .muted { margin: 10px 0 0; }
 .small { font-size: 0.875rem; }
-.shortcuts-row { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; }
-.shortcuts-row a { padding: 10px 16px; border: 1px solid var(--border); border-radius: 22px; background: var(--veil); color: var(--text); font-weight: 500; text-decoration: none; }
-.shortcuts-row a:hover { border-color: var(--text); }
+/* Aquário de funções: vidro embaçado que o cursor desembaça. */
+.tiles { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tile {
+  position: relative; isolation: isolate; overflow: hidden; display: grid; align-content: end; gap: 2px;
+  min-height: 118px; padding: 16px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--veil); -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+  color: var(--text); text-decoration: none; touch-action: manipulation;
+  transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2), border-color 0.25s, box-shadow 0.35s;
+}
+/* O ponto claro segue o cursor: é a névoa sendo limpa. */
+.tile::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity 0.3s;
+  background: radial-gradient(180px circle at var(--x, 50%) var(--y, 50%), rgb(255 255 255 / 0.55), transparent 70%);
+}
+/* A onda do toque. */
+.tile::after {
+  content: ''; position: absolute; z-index: -1; left: var(--x, 50%); top: var(--y, 50%); width: 24px; height: 24px;
+  margin: -12px 0 0 -12px; border-radius: 50%; background: var(--ember); opacity: 0; pointer-events: none;
+}
+.tile svg { position: absolute; top: 16px; left: 16px; width: 28px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
+.tile-name { font-family: var(--wide); font-size: 0.875rem; letter-spacing: -0.01em; }
+.tile-hint { color: var(--muted); font-size: 0.8125rem; line-height: 1.35; }
+.tile:hover { border-color: var(--text); }
+.tile:hover::before { opacity: 1; }
+.tile:active { transform: scale(0.97); }
+.tile:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+.tile[data-main='true'] { grid-column: span 2; min-height: 150px; border-color: transparent; background: var(--action); color: var(--on-action); }
+.tile[data-main='true'] .tile-name { font-size: 1.375rem; }
+.tile[data-main='true'] .tile-hint { color: inherit; opacity: 0.75; }
+.tile[data-main='true']::before { background: radial-gradient(220px circle at var(--x, 50%) var(--y, 50%), rgb(240 83 28 / 0.45), transparent 70%); }
+.tile[data-main='true'] svg { width: 34px; color: var(--ember); }
+/* Ondas de sinal no canto do Pix: o dinheiro sai na hora. */
+.tile-signal { position: absolute; z-index: -1; right: -60px; bottom: -60px; width: 240px; aspect-ratio: 1; pointer-events: none; }
+.tile-signal i { position: absolute; inset: 0; border: 1.5px solid var(--ember); border-radius: 50%; opacity: 0.35; transform: scale(0.45); }
+.tile-signal i:nth-child(2) { transform: scale(0.7); opacity: 0.22; }
+.tile-signal i:nth-child(3) { transform: scale(0.95); opacity: 0.12; }
+@media (max-width: 719px) {
+  /* No celular, as funções vêm logo depois do saldo; o cartão desce. */
+  .dashboard > .summary { order: 0; }
+  .dashboard > .tiles { order: 1; }
+  .dashboard > .floating-card { order: 2; }
+  .dashboard > .movements { order: 3; }
+}
+:root[data-theme='dark'] .tile:not([data-main='true'])::before { background: radial-gradient(180px circle at var(--x, 50%) var(--y, 50%), rgb(255 255 255 / 0.14), transparent 70%); }
+@media (min-width: 720px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .tile[data-main='true'] { grid-row: span 2; }
+}
+@media (min-width: 1100px) {
+  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tile { min-height: 132px; padding: 20px; }
+  .tile svg { top: 20px; left: 20px; }
+  .tile[data-main='true'] .tile-name { font-size: 1.75rem; }
+}
 .card-links { margin-top: 16px; }
 .purchases { grid-column: 1 / -1; }
 .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border: 1px solid var(--border); border-radius: 12px; }
@@ -659,6 +712,30 @@ select option { background: var(--veil-solid); color: var(--text); }
   .stage .wordmark-strokes path:nth-child(n + 5) { animation-delay: 0.3s; }
   @keyframes trace { from { stroke-dashoffset: 190; } to { stroke-dashoffset: 0; } }
   @keyframes float { 50% { translate: 0 -10px; } }
+  /* Cada tela nova sai da névoa. */
+  .page { animation: mist-in 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+  @keyframes mist-in { from { opacity: 0; filter: blur(8px); transform: translateY(10px); } }
+  /* No início, os botões sobem em sequência, uma vez por visita. */
+  /* backwards: depois de entrar, a animação não segura o transform e o hover funciona. */
+  .tile { animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(0.12s + var(--i, 0) * 55ms); }
+  @keyframes rise { from { opacity: 0; filter: blur(10px); transform: translateY(18px) scale(0.96); } }
+  .tile-signal i { animation: signal 3.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+  .tile-signal i:nth-child(2) { animation-delay: 1.2s; }
+  .tile-signal i:nth-child(3) { animation-delay: 2.4s; }
+  @keyframes signal { from { transform: scale(0.2); opacity: 0.6; } to { transform: scale(1.1); opacity: 0; } }
+  .tile:hover { transform: translateY(-4px); box-shadow: 0 18px 36px -18px var(--shadow); }
+  .tile:hover:active { transform: translateY(-1px) scale(0.97); }
+  .tile:hover svg path { stroke-dasharray: 1; animation: draw 0.7s cubic-bezier(0.3, 0, 0.2, 1) both; }
+  @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  .tile[data-pressed='true']::after { animation: wave 0.6s ease-out; }
+  @keyframes wave { from { opacity: 0.45; transform: scale(0); } to { opacity: 0; transform: scale(28); } }
+  .button, .icon-button, .chip { transition: background 0.2s, color 0.2s, transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+  .button:active, .icon-button:active, .chip:active { transform: scale(0.95); }
+  .badge { animation: pop 0.4s cubic-bezier(0.3, 1.8, 0.5, 1); }
+  @keyframes pop { from { transform: scale(0); } }
+  .notice-panel { animation: drop 0.22s ease-out; transform-origin: top right; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+  .bubble { animation: rise 0.35s ease-out backwards; }
   @keyframes swim { 50% { transform: rotate(9deg); } }
 }
 @media (prefers-reduced-motion: reduce) {
