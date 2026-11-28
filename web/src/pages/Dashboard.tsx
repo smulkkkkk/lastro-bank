@@ -6,10 +6,43 @@ import { DepositDialog } from '../components/DepositDialog'
 import { Tiles } from '../components/Tiles'
 import { TraceDialog } from '../components/TraceDialog'
 import { Alert } from '../components/ui'
-import { fetchStatement, type Entry } from '../lib/api'
+import { fetchPixLimits, fetchStatement, type Entry, type PixLimits } from '../lib/api'
 import { usePrivacy } from '../lib/privacy'
 import { messageOf } from '../lib/session'
 import { useBank } from './AppShell'
+
+/** Quanto do limite do Pix já foi usado: régua com tracinhos e o trecho em brasa. */
+function PixGauge() {
+  const [limits, setLimits] = useState<PixLimits>()
+  useEffect(() => {
+    fetchPixLimits().then(setLimits, () => {})
+  }, [])
+  if (!limits) return null
+  const used = Math.round(((limits.limitCents - limits.availableCents) / limits.limitCents) * 100)
+  return (
+    <div className="gauge">
+      <p className="gauge-value">
+        {used}
+        <span>%</span>
+      </p>
+      <p className="gauge-caption">
+        do limite do Pix
+        <br />
+        usado {limits.night ? 'esta noite' : 'hoje'}
+      </p>
+      <div
+        className="ticks"
+        role="meter"
+        aria-label="Limite do Pix usado"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={used}
+      >
+        <span style={{ width: `${Math.max(used, 1)}%` }} />
+      </div>
+    </div>
+  )
+}
 
 export function Dashboard() {
   const { account, cards, reload } = useBank()
@@ -49,6 +82,7 @@ export function Dashboard() {
             Depositar
           </button>
         </div>
+        <PixGauge />
         <p className="notice" role="status">
           {deposited !== null && `Depósito de ${money(deposited)} concluído.`}
         </p>
