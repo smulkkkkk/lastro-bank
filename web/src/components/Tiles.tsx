@@ -20,7 +20,7 @@ export const TILES: Tile[] = [
   { to: '/app/emprestimo', name: 'Empréstimo', hint: 'Simular e contratar', icon: 'M4 12h16M12 4v16M6 6l12 12' },
   { to: '/app/extrato', name: 'Extrato', hint: 'Tudo que entrou e saiu', icon: ICONS.statement },
   { to: '/app/pagar', name: 'Pagar', hint: 'Boleto e recarga de celular', icon: ICONS.bill },
-  { to: '/app/conta', name: 'Conta', hint: 'Seus dados e o tema', icon: ICONS.profile },
+  { to: '/app/bolhas', name: 'Bolhas', hint: 'Cashback e cupons nas lojas', icon: ICONS.bubbles },
 ]
 
 /**

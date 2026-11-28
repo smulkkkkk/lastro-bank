@@ -427,6 +427,18 @@ export interface BillPayment {
   createdAt: string
 }
 
+export interface BillReceipt extends BillPayment {
+  payerName: string
+  payerAccount: string
+  recipient: string
+  line: string | null
+  dueDate: string | null
+  phone: string | null
+  authentication: string
+}
+
+export const fetchReceipt = (id: string) => call<BillReceipt>(`/bills/${id}`)
+
 export type OperatorCode = 'ONDA' | 'FAROL' | 'CORRENTE'
 
 export interface Operator {
@@ -439,16 +451,51 @@ export const lookupBoleto = (line: string) =>
   call<BoletoInfo>('/bills/boletos/lookup', { method: 'POST', body: JSON.stringify({ line }) })
 
 export const payBoleto = (line: string, idempotencyKey: string) =>
-  call<BillPayment>('/bills/boletos/pay', withKey(idempotencyKey, { line }))
+  call<BillReceipt>('/bills/boletos/pay', withKey(idempotencyKey, { line }))
 
 export const sampleBoleto = () => call<BoletoInfo>('/bills/boletos/sample', { method: 'POST', body: '{}' })
 
 export const fetchOperators = () => call<Operator[]>('/bills/operators')
 
 export const topUp = (operator: OperatorCode, phone: string, amountCents: number, idempotencyKey: string) =>
-  call<BillPayment>('/bills/top-ups', withKey(idempotencyKey, { operator, phone, amountCents }))
+  call<BillReceipt>('/bills/top-ups', withKey(idempotencyKey, { operator, phone, amountCents }))
 
 export const fetchBills = () => call<BillPayment[]>('/bills')
+
+export interface BubbleEntry {
+  bubbles: number
+  reason: 'CASHBACK' | 'REDEEM'
+  description: string
+  createdAt: string
+}
+
+export interface BubbleWallet {
+  bubbles: number
+  valueCents: number
+  entries: BubbleEntry[]
+}
+
+export interface Store {
+  merchant: string
+  name: string
+  category: string
+  blurb: string
+  cashbackPercent: number
+  couponPercent: number
+  couponCapCents: number
+  couponMinCents: number
+  coupon: { id: string; expiresAt: string } | null
+}
+
+export const fetchBubbles = () => call<BubbleWallet>('/rewards')
+
+export const fetchStores = () => call<Store[]>('/rewards/stores')
+
+export const claimCoupon = (merchant: string) =>
+  call<{ id: string; expiresAt: string }>(`/rewards/stores/${merchant}/coupon`, { method: 'POST', body: '{}' })
+
+export const redeemBubbles = (bubbles: number, idempotencyKey: string) =>
+  call<BubbleWallet>('/rewards/redeem', withKey(idempotencyKey, { bubbles }))
 
 export async function resumeSession(): Promise<boolean> {
   return hasHint() ? refresh() : false

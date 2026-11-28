@@ -4,6 +4,7 @@ import dev.lastro.core.bill.BillService.BoletoInfo;
 import dev.lastro.core.bill.BillService.Operator;
 import dev.lastro.core.bill.BillService.OperatorInfo;
 import dev.lastro.core.bill.BillService.Payment;
+import dev.lastro.core.bill.BillService.Receipt;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -52,10 +54,16 @@ class BillController {
         return bills.lookup(request.line());
     }
 
+    @GetMapping("/{id}")
+    Receipt receipt(@PathVariable UUID id, @AuthenticationPrincipal Jwt user) {
+        return bills.receipt(ownerId(user), id);
+    }
+
     @PostMapping("/boletos/pay")
-    Payment pay(@RequestHeader("Idempotency-Key") @Pattern(regexp = KEY) String key,
+    Receipt pay(@RequestHeader("Idempotency-Key") @Pattern(regexp = KEY) String key,
             @Valid @RequestBody BoletoRequest request, @AuthenticationPrincipal Jwt user) {
-        return bills.payBoleto(ownerId(user), request.line(), key);
+        UUID owner = ownerId(user);
+        return bills.receipt(owner, bills.payBoleto(owner, request.line(), key).id());
     }
 
     @PostMapping("/boletos/sample")
@@ -70,9 +78,10 @@ class BillController {
     }
 
     @PostMapping("/top-ups")
-    Payment topUp(@RequestHeader("Idempotency-Key") @Pattern(regexp = KEY) String key,
+    Receipt topUp(@RequestHeader("Idempotency-Key") @Pattern(regexp = KEY) String key,
             @Valid @RequestBody TopUpRequest request, @AuthenticationPrincipal Jwt user) {
-        return bills.topUp(ownerId(user), request.operator(), request.phone(), request.amountCents(), key);
+        UUID owner = ownerId(user);
+        return bills.receipt(owner, bills.topUp(owner, request.operator(), request.phone(), request.amountCents(), key).id());
     }
 
     private static UUID ownerId(Jwt user) {

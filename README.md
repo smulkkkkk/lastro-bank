@@ -68,6 +68,20 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
   "Gerar boleto de teste" cria um boleto registrado para experimentar.
 - Cada boleto é pago uma vez só, mesmo com duas pessoas pagando no mesmo instante; o teste prova isso.
 - Recarga em operadoras fictícias, só nos valores que elas aceitam. O extrato mostra o celular mascarado.
+- Todo pagamento tem comprovante com autenticação, que dá para compartilhar ou salvar em PDF.
+
+![Comprovante do boleto](docs/images/pc-comprovante-boleto.png)
+
+## Bolhas e lojas parceiras
+
+![Bolhas e cupons das lojas](docs/images/pc-bolhas.png)
+
+- Bolhas são a moeda do app: cada uma vale R$ 0,01 e vem de cashback nas compras no cartão, com
+  percentual maior nas lojas parceiras (fictícias).
+- O cupom de uma loja entra sozinho na próxima compra lá, com teto e valor mínimo; o cashback é
+  calculado sobre o que foi cobrado de fato.
+- Bolhas não são dinheiro até a troca: só então viram um lançamento no razão. Duas trocas ao mesmo
+  tempo não gastam as mesmas bolhas, e o extrato de bolhas não aceita alteração nem no banco.
 
 ## Avisos ao vivo e atendimento
 
@@ -178,7 +192,8 @@ A API sobe em `http://localhost:8080`.
 - [x] Investimentos e notícias
 - [x] Antifraude em Go, com revisão por analista
 - [x] Avisos ao vivo, chat com IA e atendimento no WhatsApp
-- [ ] Bolhas, descontos, outros bancos e aproximação simulada
+- [x] Bolhas e descontos nas lojas parceiras
+- [ ] Outros bancos e aproximação simulada
 - [ ] Docker, CI e publicação
 
 O plano completo está em [produto](docs/superpowers/specs/2026-11-24-lastro-v2-produto.md) e na

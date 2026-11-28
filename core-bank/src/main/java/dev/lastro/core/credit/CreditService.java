@@ -4,6 +4,7 @@ import dev.lastro.core.account.AccountService;
 import dev.lastro.core.ledger.LedgerService;
 import dev.lastro.core.ledger.LedgerService.Kind;
 import dev.lastro.core.ledger.Posting;
+import dev.lastro.core.reward.RewardService;
 import dev.lastro.core.shared.ApiException;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -31,7 +32,7 @@ class CreditService {
     enum Mode { DEBIT, CREDIT }
 
     record Purchase(UUID id, UUID cardId, String kind, String mode, String merchant, String category,
-            long amountCents, int installments, boolean contactless, OffsetDateTime createdAt) {
+            long amountCents, int installments, boolean contactless, OffsetDateTime createdAt, long discountCents) {
     }
 
     record Invoice(LocalDate reference, LocalDate closesOn, LocalDate dueOn, String status, long totalCents,
@@ -53,17 +54,20 @@ class CreditService {
             rs.getObject("card_id", UUID.class), rs.getString("kind"), rs.getString("mode"),
             rs.getString("merchant"), rs.getString("category"), rs.getLong("amount_cents"),
             rs.getInt("installments"), rs.getBoolean("contactless"),
-            rs.getObject("created_at", OffsetDateTime.class));
+            rs.getObject("created_at", OffsetDateTime.class), rs.getLong("discount_cents"));
 
     private final JdbcClient jdbc;
     private final LedgerService ledger;
     private final AccountService accounts;
     private final Clock clock;
 
-    CreditService(JdbcClient jdbc, LedgerService ledger, AccountService accounts, Clock clock) {
+    private final RewardService rewards;
+
+    CreditService(JdbcClient jdbc, LedgerService ledger, AccountService accounts, RewardService rewards, Clock clock) {
         this.jdbc = jdbc;
         this.ledger = ledger;
         this.accounts = accounts;
+        this.rewards = rewards;
         this.clock = clock;
     }
 
@@ -107,7 +111,8 @@ class CreditService {
         Optional<Purchase> previous = find(ownerId, idempotencyKey);
         if (previous.isPresent()) {
             Purchase p = previous.get();
-            if (!cardId.equals(p.cardId()) || !p.merchant().equals(merchant.title()) || p.amountCents() != cents
+            if (!cardId.equals(p.cardId()) || !p.merchant().equals(merchant.title())
+                    || p.amountCents() + p.discountCents() != cents
                     || !p.mode().equals(mode.name()) || p.installments() != installments
                     || p.contactless() != contactless) {
                 throw mismatch();
@@ -129,17 +134,24 @@ class CreditService {
         if (mode == Mode.DEBIT && installments != 1) {
             throw ApiException.unprocessable("purchase.installments", "Compra no débito é à vista.");
         }
-        if (cents / installments < MIN_INSTALLMENT_CENTS && installments > 1) {
+        // Cupom da loja, se houver: a compra é cobrada já com o desconto.
+        Optional<RewardService.UsableCoupon> coupon = rewards.usableCoupon(ownerId, merchant.name(), cents);
+        long discount = coupon.map(RewardService.UsableCoupon::discountCents).orElse(0L);
+        long charged = cents - discount;
+        if (charged / installments < MIN_INSTALLMENT_CENTS && installments > 1) {
             throw ApiException.unprocessable("purchase.small_installment", "Cada parcela precisa ter pelo menos R$ 5,00.");
         }
         if (mode == Mode.CREDIT) {
             rejectOverdue(ownerId);
         }
         UUID transactionId = ledger.post(Kind.CARD_PURCHASE, merchant.title(), null, List.of(
-                Posting.debit(mode == Mode.DEBIT ? checking : credit, cents),
-                Posting.credit(LedgerService.MERCHANTS_ACCOUNT, cents)));
-        return save(ownerId, cardId, "PURCHASE", mode, merchant.title(), merchant.category(), cents, installments,
-                contactless, idempotencyKey, transactionId);
+                Posting.debit(mode == Mode.DEBIT ? checking : credit, charged),
+                Posting.credit(LedgerService.MERCHANTS_ACCOUNT, charged)));
+        coupon.ifPresent(used -> rewards.markUsed(used.id(), transactionId));
+        Purchase purchase = save(ownerId, cardId, "PURCHASE", mode, merchant.title(), merchant.category(), charged,
+                discount, installments, contactless, idempotencyKey, transactionId);
+        rewards.earn(ownerId, merchant.name(), charged, purchase.id(), merchant.title());
+        return purchase;
     }
 
     @Transactional
@@ -204,21 +216,22 @@ class CreditService {
                 Posting.credit(checking, cents),
                 Posting.credit(LedgerService.INTEREST_ACCOUNT, quote.feeCents())));
         return save(ownerId, null, "CONVERSION", Mode.CREDIT, "Limite convertido em saldo", "Crédito",
-                quote.totalCents(), installments, false, idempotencyKey, transactionId);
+                quote.totalCents(), 0, installments, false, idempotencyKey, transactionId);
     }
 
     private Purchase save(UUID ownerId, UUID cardId, String kind, Mode mode, String merchant, String category,
-            long cents, int installments, boolean contactless, String idempotencyKey, UUID transactionId) {
+            long cents, long discount, int installments, boolean contactless, String idempotencyKey, UUID transactionId) {
         UUID id = UUID.randomUUID();
         Purchase purchase = jdbc.sql("""
                         INSERT INTO core.purchase (id, owner_id, card_id, kind, mode, merchant, category, amount_cents,
-                                                   installments, contactless, idempotency_key, transaction_id, created_at)
+                                                   discount_cents, installments, contactless, idempotency_key,
+                                                   transaction_id, created_at)
                         VALUES (:id, :owner, :card, :kind, :mode, :merchant, :category, :cents,
-                                :installments, :contactless, :key, :tx, :at)
+                                :discount, :installments, :contactless, :key, :tx, :at)
                         RETURNING *""")
                 .param("id", id).param("owner", ownerId).param("card", cardId).param("kind", kind)
                 .param("mode", mode.name()).param("merchant", merchant).param("category", category)
-                .param("cents", cents).param("installments", installments).param("contactless", contactless)
+                .param("cents", cents).param("discount", discount).param("installments", installments).param("contactless", contactless)
                 .param("key", idempotencyKey).param("tx", transactionId).param("at", now())
                 .query(PURCHASE).single();
         if (mode == Mode.CREDIT) {

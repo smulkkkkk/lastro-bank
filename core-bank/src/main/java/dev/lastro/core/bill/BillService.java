@@ -38,6 +38,15 @@ public class BillService {
     public record Payment(UUID id, String kind, String description, long amountCents, Instant createdAt) {
     }
 
+    /**
+     * Comprovante. A autenticação é um resumo SHA-256 do pagamento e do lançamento no razão: o mesmo
+     * pagamento sempre mostra o mesmo código, e qualquer mudança nos dados mudaria o código.
+     */
+    public record Receipt(UUID id, String kind, String description, long amountCents, Instant createdAt,
+            String payerName, String payerAccount, String recipient, String line, LocalDate dueDate, String phone,
+            String authentication) {
+    }
+
     /** Operadoras fictícias, com os valores que cada uma aceita. */
     public enum Operator {
         ONDA("Onda Móvel"), FAROL("Farol Celular"), CORRENTE("Corrente Telecom");
@@ -150,6 +159,46 @@ public class BillService {
                 .param("owner", ownerId).param("now", OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
                 .update();
         return new BoletoInfo(boleto.line(), boleto.bank(), beneficiary, amount, due, false);
+    }
+
+    /** Só o dono vê o comprovante; para os outros, o pagamento não existe. */
+    public Receipt receipt(UUID ownerId, UUID id) {
+        return jdbc.sql("""
+                        SELECT p.*, u.full_name, a.branch, a.number, b.beneficiary, b.due_date
+                          FROM core.bill_payment p
+                          JOIN core.app_user u ON u.id = p.owner_id
+                          JOIN core.account a ON a.owner_id = p.owner_id AND a.kind = 'CHECKING'
+                          LEFT JOIN core.boleto b ON b.barcode = p.barcode
+                         WHERE p.id = :id AND p.owner_id = :owner""")
+                .param("id", id).param("owner", ownerId)
+                .query((rs, n) -> {
+                    String kind = rs.getString("kind");
+                    String barcode = rs.getString("barcode");
+                    String operator = rs.getString("operator");
+                    Instant at = rs.getObject("created_at", OffsetDateTime.class).toInstant();
+                    UUID transaction = rs.getObject("transaction_id", UUID.class);
+                    long cents = rs.getLong("amount_cents");
+                    return new Receipt(id, kind, rs.getString("description"), cents, at, rs.getString("full_name"),
+                            "Agência " + rs.getString("branch") + ", conta " + rs.getString("number"),
+                            barcode != null ? rs.getString("beneficiary") : Operator.valueOf(operator).title,
+                            barcode != null ? Boleto.parse(barcode).line() : null,
+                            barcode != null ? rs.getObject("due_date", LocalDate.class) : null,
+                            barcode == null ? masked(rs.getString("phone")) : null,
+                            authentication(id, transaction, cents, at));
+                })
+                .optional()
+                .orElseThrow(() -> ApiException.notFound("bill.not_found", "Pagamento não encontrado."));
+    }
+
+    static String authentication(UUID id, UUID transaction, long cents, Instant at) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(
+                    (id + "|" + transaction + "|" + cents + "|" + at).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String hex = java.util.HexFormat.of().withUpperCase().formatHex(digest).substring(0, 32);
+            return String.join(".", hex.split("(?<=\\G.{4})"));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     public List<OperatorInfo> operators() {

@@ -170,6 +170,8 @@ try {
     for (const [merchant, amountCents, mode, installments] of [['ANCORA', 129900, 'CREDIT', 6], ['FAROL', 8990, 'CREDIT', 1], ['ABISSAL', 4600, 'CREDIT', 1], ['MARE_CHEIA', 1850, 'DEBIT', 1]]) {
       await post('/cards/' + cards[0].id + '/purchases', { merchant, amountCents, mode, installments, contactless: mode === 'DEBIT' }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
+    // Um cupom guardado, para a tela de bolhas mostrar como fica.
+    await post('/rewards/stores/ABISSAL/coupon', {}, auth)
     const quote = await (await fetch('/api/v1/loans/quote?amountCents=150000&installments=12', { headers: auth })).json()
     await post('/loans', { amountCents: 150000, installments: 12, acceptedTotalCents: quote.totalCents }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     const market = await (await fetch('/api/v1/market', { headers: auth })).json()
@@ -196,6 +198,7 @@ try {
       ['conta', '/app/conta', '.next'],
       ['ajuda', '/app/ajuda', '.bubble'],
       ['pagar', '/app/pagar', '.segmented'],
+      ['bolhas', '/app/bolhas', '.store'],
     ]) {
       await open(path, ready)
       const name = `${format}-${screen}`
@@ -220,7 +223,7 @@ try {
 
   // O menor celular que o projeto promete atender.
   await viewport(360, 640, true)
-  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble'], ['/app/pagar', '.segmented']]) {
+  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble'], ['/app/pagar', '.segmented'], ['/app/bolhas', '.store']]) {
     await open(path, ready)
     await checkWidth(`360px ${path}`)
   }
@@ -344,6 +347,18 @@ try {
   else {
     await checkWidth('pc-boleto')
     await save('pc-boleto.png', await shot())
+    await run(`document.querySelector('.boleto-readout .button').click()`)
+    let paid = false
+    for (let i = 0; i < 30 && !paid; i++) {
+      await wait(300)
+      paid = await run(`!!document.querySelector('.receipt-sheet')`)
+    }
+    if (!paid) problems.push('o comprovante do boleto não apareceu')
+    else {
+      await wait(700)
+      await checkWidth('pc-comprovante-boleto')
+      await save('pc-comprovante-boleto.png', await shot())
+    }
   }
 
   // Aviso ao vivo: o Pix chega pelo sentinel e aparece sem recarregar a página.
