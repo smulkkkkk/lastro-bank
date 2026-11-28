@@ -712,7 +712,7 @@ select option { background: var(--veil-solid); color: var(--text); }
 }
 /* No celular cabem cinco lugares; o extrato fica a um toque, no Início. */
 @media (max-width: 719px) {
-  .app-nav a[data-place='extrato'], .app-nav a[data-place='credito'], .app-nav a[data-place='investir'] { display: none !important; }
+  .app-nav a[data-place='extrato'], .app-nav a[data-place='credito'], .app-nav a[data-place='investir'], .app-nav a[data-place='pagar'] { display: none !important; }
 }
 /* Tablet */
 @media (min-width: 720px) {
@@ -808,3 +808,42 @@ select option { background: var(--veil-solid); color: var(--text); }
   .button { padding: 0 12px; letter-spacing: 0.06em; gap: 0.4em; }
   .button.large { padding: 0 16px; }
 }
+
+/* Pagar: boleto e recarga */
+.pay { display: grid; gap: 28px; max-width: 760px; }
+.pay .section-head { margin: 0; justify-content: flex-start; gap: 12px 28px; }
+.segmented { display: flex; gap: 4px; }
+.segmented button {
+  padding: 8px 6px; border: 0; background: none; color: var(--muted); cursor: pointer;
+  font-family: var(--wide); font-size: var(--hud); letter-spacing: 0.12em; text-transform: uppercase;
+}
+.segmented button[aria-selected='true'] { color: var(--text); }
+.segmented button[aria-selected='true']::before { content: '[ '; color: var(--ember); }
+.segmented button[aria-selected='true']::after { content: ' ]'; color: var(--ember); }
+.pay-flow { display: grid; gap: 24px; }
+.pay-form { display: grid; gap: 20px; justify-items: start; }
+.pay-form .field { width: 100%; }
+.boleto-readout {
+  display: grid; gap: 4px; padding-top: 22px;
+  background: repeating-linear-gradient(90deg, var(--text) 0 1px, transparent 1px 8px) 0 0 / 100% 6px no-repeat;
+}
+.boleto-readout .balance { margin: 6px 0 0; }
+.boleto-readout .button { justify-self: start; margin-top: 18px; }
+.readout-label { color: var(--muted); font-size: 0.8125rem; }
+.readout-name { font-family: var(--wide); font-size: 1.125rem; letter-spacing: -0.01em; }
+.boleto-line { margin-top: 6px; color: var(--muted); font-size: 0.8125rem; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.choice { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.choice legend { width: 100%; margin-bottom: 8px; padding: 0; font-weight: 500; }
+.choice label { position: relative; padding: 10px 14px; border-radius: 8px; background: rgb(255 255 255 / 0.5); cursor: pointer; }
+:root[data-theme='dark'] .choice label { background: var(--veil); }
+.choice label[data-checked='true'] { background: var(--action); color: var(--on-action); }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice label:has(input:focus-visible) { outline: 2px solid var(--ember); outline-offset: 2px; }
+.pay-receipt { display: grid; gap: 6px; justify-items: start; }
+.pay-receipt .button { margin-top: 14px; }
+.pay-history h2 { margin-bottom: 8px; font-size: 1rem; }
+.pay-history li { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
+.pay-history li span { display: grid; }
+.pay-history small { font-size: 0.8125rem; }
+.pay-history strong { white-space: nowrap; }
+.pay .segmented { padding: 0; border: 0; border-radius: 0; background: none; }

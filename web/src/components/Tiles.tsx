@@ -19,7 +19,7 @@ export const TILES: Tile[] = [
   { to: '/app/credito', name: 'Crédito', hint: 'Fatura e limite', icon: ICONS.credit },
   { to: '/app/emprestimo', name: 'Empréstimo', hint: 'Simular e contratar', icon: 'M4 12h16M12 4v16M6 6l12 12' },
   { to: '/app/extrato', name: 'Extrato', hint: 'Tudo que entrou e saiu', icon: ICONS.statement },
-  { to: '/app/ajuda', name: 'Ajuda', hint: 'Falar com o Lino', icon: 'M4 5h16v11H9l-5 4zM8 9.500h8M8 12.500h5' },
+  { to: '/app/pagar', name: 'Pagar', hint: 'Boleto e recarga de celular', icon: ICONS.bill },
   { to: '/app/conta', name: 'Conta', hint: 'Seus dados e o tema', icon: ICONS.profile },
 ]
 

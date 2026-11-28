@@ -58,6 +58,17 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
 
 ![Limite, faturas e compras parceladas](docs/images/pc-credito.png)
 
+## Boleto e recarga
+
+![Boleto de teste conferido antes de pagar](docs/images/pc-boleto.png)
+
+- A linha digitável é conferida como num banco: dígito de cada campo (módulo 10), dígito geral (módulo 11)
+  e vencimento pelo fator, que recomeçou em 1000 em fevereiro de 2025.
+- Só paga boleto registrado, como na consulta que os bancos fazem antes de pagar. O botão
+  "Gerar boleto de teste" cria um boleto registrado para experimentar.
+- Cada boleto é pago uma vez só, mesmo com duas pessoas pagando no mesmo instante; o teste prova isso.
+- Recarga em operadoras fictícias, só nos valores que elas aceitam. O extrato mostra o celular mascarado.
+
 ## Avisos ao vivo e atendimento
 
 ![Pix recebido aparecendo na hora](docs/images/pc-aviso.png)
@@ -161,7 +172,7 @@ A API sobe em `http://localhost:8080`.
 - [x] Base: razão contábil, login, contas, depósito e extrato
 - [x] Site e app: identidade, carteira 3D, celular, tablet e PC
 - [x] Pix interno e Rastro do dinheiro
-- [ ] Boleto, recarga e compras no cartão
+- [x] Boleto, recarga e compras no cartão
 - [x] Caixinhas com CDI
 - [x] Crédito, fatura, conversão de limite e empréstimo
 - [x] Investimentos e notícias
