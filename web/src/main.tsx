@@ -13,6 +13,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Landing } from './pages/Landing'
 import { Pix } from './pages/Pix'
 import { Help } from './pages/Help'
+import { Pay } from './pages/Pay'
 import { Profile } from './pages/Profile'
 import { Credit } from './pages/Credit'
 import { Invest } from './pages/Invest'
@@ -41,6 +42,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="analise" element={<Reviews />} />
               <Route path="extrato" element={<Statement />} />
               <Route path="ajuda" element={<Help />} />
+              <Route path="pagar" element={<Pay />} />
               <Route path="conta" element={<Profile />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

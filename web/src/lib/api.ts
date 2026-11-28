@@ -410,6 +410,46 @@ export const sendHelpMessage = (text: string) =>
 export const askForPerson = (phone: string) =>
   call<HelpConversation>('/help/handoff', { method: 'POST', body: JSON.stringify({ phone }) })
 
+export interface BoletoInfo {
+  line: string
+  bank: string
+  beneficiary: string
+  amountCents: number
+  dueDate: string
+  paid: boolean
+}
+
+export interface BillPayment {
+  id: string
+  kind: 'BOLETO' | 'TOP_UP'
+  description: string
+  amountCents: number
+  createdAt: string
+}
+
+export type OperatorCode = 'ONDA' | 'FAROL' | 'CORRENTE'
+
+export interface Operator {
+  code: OperatorCode
+  name: string
+  amountsCents: number[]
+}
+
+export const lookupBoleto = (line: string) =>
+  call<BoletoInfo>('/bills/boletos/lookup', { method: 'POST', body: JSON.stringify({ line }) })
+
+export const payBoleto = (line: string, idempotencyKey: string) =>
+  call<BillPayment>('/bills/boletos/pay', withKey(idempotencyKey, { line }))
+
+export const sampleBoleto = () => call<BoletoInfo>('/bills/boletos/sample', { method: 'POST', body: '{}' })
+
+export const fetchOperators = () => call<Operator[]>('/bills/operators')
+
+export const topUp = (operator: OperatorCode, phone: string, amountCents: number, idempotencyKey: string) =>
+  call<BillPayment>('/bills/top-ups', withKey(idempotencyKey, { operator, phone, amountCents }))
+
+export const fetchBills = () => call<BillPayment[]>('/bills')
+
 export async function resumeSession(): Promise<boolean> {
   return hasHint() ? refresh() : false
 }

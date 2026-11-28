@@ -29,7 +29,7 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Ver ou esconder o dinheiro | Botão de olho em todas as telas | 4 ✅ |
 | Débito e bloqueio de cartão | Cartões na API | 4 ✅ |
 | Pix | Chaves e transferências internas, sem ligação com o Pix real | 5 ✅ |
-| Boleto e recarga | Contas fictícias pagas pelo razão | 5 |
+| Boleto e recarga | Contas fictícias pagas pelo razão | 5 ✅ |
 | Histórico de compras | Compras simuladas no cartão, extrato por cartão | 5 |
 | Rastro | Consulta sobre o razão | 5 ✅ |
 | Crédito e conversão de limite em débito | Limite, fatura e conversão com taxa exibida antes | 6 ✅ |

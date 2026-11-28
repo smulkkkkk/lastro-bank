@@ -195,6 +195,7 @@ try {
       ['extrato', '/app/extrato', '.entry'],
       ['conta', '/app/conta', '.next'],
       ['ajuda', '/app/ajuda', '.bubble'],
+      ['pagar', '/app/pagar', '.segmented'],
     ]) {
       await open(path, ready)
       const name = `${format}-${screen}`
@@ -219,7 +220,7 @@ try {
 
   // O menor celular que o projeto promete atender.
   await viewport(360, 640, true)
-  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble']]) {
+  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble'], ['/app/pagar', '.segmented']]) {
     await open(path, ready)
     await checkWidth(`360px ${path}`)
   }
@@ -254,7 +255,9 @@ try {
   if ((await run(flipped)) !== 1) problems.push('tocar não virou o cartão da frente')
   behaviour.frozen = await run(`(async () => {
     const pause = () => new Promise((r) => setTimeout(r, 900))
-    document.querySelector('.card-settings .switch').click(); await pause()
+    document.querySelector('.card-settings .switch').click()
+    // A resposta da API pode demorar em máquina lenta: espera até 6 s.
+    for (let i = 0; i < 20 && !document.querySelector('.card-frozen'); i++) await new Promise((r) => setTimeout(r, 300))
     const frozen = document.querySelectorAll('.card-frozen').length
     document.querySelector('[aria-label="Esconder valores"]').click(); await pause()
     return frozen
@@ -327,6 +330,21 @@ try {
   const leaked = await run(`(document.querySelector('.app').innerText.match(/R\\$\\s?\\d/g) || []).length`)
   if (leaked) problems.push(`valores visíveis com o olho fechado: ${leaked}`)
   await run(`localStorage.removeItem('lastro-ocultar')`)
+
+  // Boleto de teste conferido, pronto para pagar.
+  await viewport(1440, 900)
+  await open('/app/pagar', '.segmented')
+  await run(`[...document.querySelectorAll('.link-button')].find((b) => b.textContent.includes('boleto de teste')).click()`)
+  let readout = false
+  for (let i = 0; i < 30 && !readout; i++) {
+    await wait(300)
+    readout = await run(`!!document.querySelector('.boleto-readout')`)
+  }
+  if (!readout) problems.push('o boleto de teste não apareceu')
+  else {
+    await checkWidth('pc-boleto')
+    await save('pc-boleto.png', await shot())
+  }
 
   // Aviso ao vivo: o Pix chega pelo sentinel e aparece sem recarregar a página.
   await viewport(1440, 900)
