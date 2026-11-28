@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Navigate, NavLink, Outlet, useLocation, useOutletContext } from 'react-router'
-import { Alert, Brand, ThemeToggle } from '../components/ui'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from 'react-router'
+import { FishMark } from '../components/Marks'
+import { Alert, ThemeToggle } from '../components/ui'
 import { Lino } from '../components/Lino'
 import { HelpLink, NoticeBell, Toasts } from '../components/Notices'
 import { useNotices, type Notice } from '../lib/live'
@@ -59,9 +60,37 @@ function LiveTools({ reload }: { reload: () => Promise<void> }) {
   )
 }
 
+/** Menu por cima da névoa, no tablet: os destinos em letra larga, um por linha. */
+function MenuSheet({ places, onClose }: { places: { to: string; label: string }[]; onClose: () => void }) {
+  const first = useRef<HTMLAnchorElement>(null)
+  useEffect(() => {
+    first.current?.focus()
+    const close = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
+    document.addEventListener('keydown', close)
+    return () => document.removeEventListener('keydown', close)
+  }, [onClose])
+  return (
+    <div className="menu-sheet" role="dialog" aria-modal="true" aria-label="Menu">
+      <button type="button" className="hud-menu" onClick={onClose}>
+        Fechar
+      </button>
+      <nav>
+        {places.map((place, index) => (
+          <NavLink key={place.to} to={place.to} end={place.to === '/app'} ref={index === 0 ? first : undefined} style={{ '--i': index } as CSSProperties}>
+            {place.label}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  )
+}
+
 export function AppShell() {
   const session = useSession()
   const location = useLocation()
+  const [menu, setMenu] = useState(false)
+  // Trocar de tela fecha o menu.
+  useEffect(() => setMenu(false), [location.pathname])
   const [account, setAccount] = useState<Account>()
   const [cards, setCards] = useState<Card[]>()
   const [error, setError] = useState('')
@@ -100,20 +129,34 @@ export function AppShell() {
   if (session.status === 'out') return <Navigate to="/entrar" replace />
 
   const offline = session.status === 'offline'
+  const places = [...PLACES, ...(currentRole() === 'ANALYST' ? [{ to: '/app/analise', label: 'Análise', icon: ICONS.review }] : [])]
 
   return (
     <div className="app">
       <header className="app-top">
-        <Brand to="/app" />
+        {/* Como na névoa da capa: um selo escuro no canto e os destinos em colchetes. */}
+        <Link to="/app" className="seal" aria-label="Lastro, início">
+          <FishMark />
+        </Link>
+        <nav className="hud-nav" aria-label="Principal">
+          {places.map((place) => (
+            <NavLink key={place.to} to={place.to} end={place.to === '/app'}>
+              {place.label}
+            </NavLink>
+          ))}
+        </nav>
+        <button type="button" className="hud-menu" aria-expanded={menu} onClick={() => setMenu(true)}>
+          Menu
+        </button>
         <div className="app-tools">
           {account && <LiveTools reload={reload} />}
           <PrivacyToggle />
           <ThemeToggle />
         </div>
       </header>
-      <nav className="app-nav" aria-label="Principal">
-        <Brand to="/app" />
-        {[...PLACES, ...(currentRole() === 'ANALYST' ? [{ to: '/app/analise', label: 'Análise', icon: ICONS.review }] : [])].map((place) => (
+      {menu && <MenuSheet places={places} onClose={() => setMenu(false)} />}
+      <nav className="app-nav" aria-label="Atalhos">
+        {places.map((place) => (
           <NavLink key={place.to} to={place.to} end={place.to === '/app'} data-place={place.to.split('/').pop()}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d={place.icon} />
