@@ -15,6 +15,7 @@ import { Pix } from './pages/Pix'
 import { Help } from './pages/Help'
 import { Pay } from './pages/Pay'
 import { Rewards } from './pages/Rewards'
+import { Banks } from './pages/Banks'
 import { Profile } from './pages/Profile'
 import { Credit } from './pages/Credit'
 import { Invest } from './pages/Invest'
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="ajuda" element={<Help />} />
               <Route path="pagar" element={<Pay />} />
               <Route path="bolhas" element={<Rewards />} />
+              <Route path="bancos" element={<Banks />} />
               <Route path="conta" element={<Profile />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

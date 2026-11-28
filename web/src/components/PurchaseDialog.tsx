@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { buy, fetchMerchants, type Card, type Merchant, type Purchase } from '../lib/api'
 import { centsFromInput, formatCents } from '../lib/money'
 import { messageOf } from '../lib/session'
+import { TapScene, type TapDevice } from './TapScene'
 import { Alert, Field } from './ui'
 
 interface Props {
@@ -20,7 +21,9 @@ export function PurchaseDialog({ card, onClose, onDone }: Props) {
   const [cents, setCents] = useState(0)
   const [mode, setMode] = useState<'DEBIT' | 'CREDIT'>('CREDIT')
   const [installments, setInstallments] = useState(1)
-  const [contactless, setContactless] = useState(false)
+  // INSERT: cartão na maquininha, com senha. Os outros são por aproximação.
+  const [how, setHow] = useState<'INSERT' | TapDevice>('INSERT')
+  const contactless = how !== 'INSERT'
   const [approved, setApproved] = useState<Purchase>()
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -43,7 +46,7 @@ export function PurchaseDialog({ card, onClose, onDone }: Props) {
     if (cents === 0) return setError('Digite o valor da compra.')
     setSending(true)
     try {
-      const purchase = await buy(card.id, { merchant, amountCents: cents, mode, installments: mode === 'DEBIT' ? 1 : installments, contactless }, key.current)
+      const purchase = await buy(card.id, { merchant, amountCents: cents, mode, installments: mode === 'DEBIT' ? 1 : installments, contactless, ...(contactless ? { device: how } : {}) }, key.current)
       setApproved(purchase)
       onDone(purchase)
     } catch (failure) {
@@ -56,12 +59,16 @@ export function PurchaseDialog({ card, onClose, onDone }: Props) {
     <dialog ref={dialog} className="dialog" aria-labelledby="buy-title" onClose={onClose}>
       {approved ? (
         <div className="approved">
-          <span className="tap" aria-hidden="true" />
+          {approved.device ? <TapScene device={approved.device} /> : <span className="tap" aria-hidden="true" />}
           <h2 id="buy-title">Compra aprovada</h2>
           <p>
             {approved.merchant}, {formatCents(approved.amountCents)} no {approved.mode === 'DEBIT' ? 'débito' : 'crédito'}
-            {approved.installments > 1 && ` em ${approved.installments}x`}.
+            {approved.installments > 1 && ` em ${approved.installments}x`}
+            {approved.device && `, aproximando o ${{ CARD: 'cartão', PHONE: 'celular', WATCH: 'relógio' }[approved.device]}`}.
           </p>
+          {approved.discountCents > 0 && (
+            <p className="coupon-held">Cupom da loja: {formatCents(approved.discountCents)} de desconto</p>
+          )}
           <div className="dialog-actions">
             <button type="button" className="button" autoFocus onClick={() => dialog.current?.close()}>
               Fechar
@@ -104,10 +111,15 @@ export function PurchaseDialog({ card, onClose, onDone }: Props) {
               </select>
             </div>
           )}
-          <label className="check">
-            <input type="checkbox" checked={contactless} onChange={(event) => { changed(); setContactless(event.target.checked) }} />
-            Pagar por aproximação
-          </label>
+          <fieldset className="choice">
+            <legend>Na maquininha</legend>
+            {([['INSERT', 'Inserir cartão'], ['CARD', 'Aproximar cartão'], ['PHONE', 'Celular'], ['WATCH', 'Relógio']] as const).map(([value, label]) => (
+              <label key={value} data-checked={how === value}>
+                <input type="radio" name="how" checked={how === value} onChange={() => { changed(); setHow(value) }} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
           {error && <Alert>{error}</Alert>}
           <div className="dialog-actions">
             <button type="button" className="button quiet" onClick={() => dialog.current?.close()}>

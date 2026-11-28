@@ -87,7 +87,8 @@ export function Cards() {
                 <strong>{item.merchant}</strong>
                 <span className="muted">
                   {formatDate(item.createdAt)}, {item.mode === 'DEBIT' ? 'débito' : item.installments > 1 ? `crédito em ${item.installments}x` : 'crédito'}
-                  {item.contactless && ', aproximação'}
+                  {item.contactless && `, aproximação pelo ${{ CARD: 'cartão', PHONE: 'celular', WATCH: 'relógio' }[item.device ?? 'CARD']}`}
+                  {item.discountCents > 0 && `, cupom de ${money(item.discountCents)}`}
                 </span>
               </span>
               <strong>{money(item.amountCents)}</strong>
