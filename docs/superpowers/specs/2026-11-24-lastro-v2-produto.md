@@ -41,7 +41,7 @@ ordem em que ele entrou (primeiro a entrar, primeiro a sair). É a linha de last
 | Chat com IA | Assistente que responde e explica, sem poder mover dinheiro | 9 ✅ |
 | Avisos ao vivo | Outbox no Java, Server-Sent Events no Go | 9 ✅ |
 | WhatsApp pelo n8n | Webhook que abre atendimento humano | 9 ✅ |
-| Bolhas e descontos em lojas | Cashback na moeda do app e lojas parceiras fictícias | 10 |
+| Bolhas e descontos em lojas | Cashback na moeda do app e lojas parceiras fictícias | 10 ✅ |
 | Conectar outros bancos | Open Finance simulado, com consentimento e revogação | 10 |
 | Aproximação por celular e relógio | Simulação animada | 10 |
 | Imagens para o GitHub | Capturas geradas por script | 4 ✅ |

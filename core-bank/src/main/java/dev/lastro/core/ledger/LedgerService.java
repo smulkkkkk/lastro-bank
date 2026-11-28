@@ -26,7 +26,7 @@ public class LedgerService {
 
     public enum Kind { WELCOME, DEPOSIT, TRANSFER, VAULT_IN, VAULT_OUT, YIELD, CARD_PURCHASE, INVOICE_PAYMENT,
         CREDIT_CONVERSION, LOAN, LOAN_PAYMENT,
-        INVESTMENT_BUY, INVESTMENT_SELL, BILL_PAYMENT, TOP_UP, REVERSAL }
+        INVESTMENT_BUY, INVESTMENT_SELL, BILL_PAYMENT, TOP_UP, REWARD, REVERSAL }
 
     /** O que pode sair: saldo livre mais o limite, que só existe em conta de crédito e de empréstimo. */
     public record LockedAccount(UUID id, String kind, long balanceCents, long heldCents, long creditLimitCents) {

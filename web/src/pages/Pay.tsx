@@ -1,13 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { ReceiptSheet } from '../components/ReceiptSheet'
 import { Alert, Field } from '../components/ui'
 import {
   fetchBills,
+  fetchReceipt,
   fetchOperators,
   lookupBoleto,
   payBoleto,
   sampleBoleto,
   topUp,
   type BillPayment,
+  type BillReceipt,
   type BoletoInfo,
   type Operator,
   type OperatorCode,
@@ -26,14 +29,15 @@ export function Pay() {
   const { money } = usePrivacy()
   const [tab, setTab] = useState<Tab>('boleto')
   const [history, setHistory] = useState<BillPayment[]>([])
-  const [receipt, setReceipt] = useState<BillPayment>()
+  const [receipt, setReceipt] = useState<BillReceipt>()
+  const [error, setError] = useState('')
 
   const refresh = () => fetchBills().then(setHistory, () => {})
   useEffect(() => {
     void refresh()
   }, [])
 
-  const done = (payment: BillPayment) => {
+  const done = (payment: BillReceipt) => {
     setReceipt(payment)
     void reload()
     void refresh()
@@ -61,15 +65,9 @@ export function Pay() {
         </div>
       </header>
 
+      {error && <Alert>{error}</Alert>}
       {receipt ? (
-        <div className="pay-receipt" role="status">
-          <h2>{receipt.kind === 'BOLETO' ? 'Boleto pago' : 'Recarga feita'}</h2>
-          <p className="balance">{money(receipt.amountCents)}</p>
-          <p className="muted">{receipt.description}</p>
-          <button type="button" className="button quiet" onClick={() => setReceipt(undefined)}>
-            {receipt.kind === 'BOLETO' ? 'Pagar outro boleto' : 'Fazer outra recarga'}
-          </button>
-        </div>
+        <ReceiptSheet receipt={receipt} onClose={() => setReceipt(undefined)} />
       ) : tab === 'boleto' ? (
         <BoletoForm onPaid={done} />
       ) : (
@@ -82,11 +80,20 @@ export function Pay() {
           <ul>
             {history.map((payment) => (
               <li key={payment.id}>
-                <span>
-                  {payment.description}
-                  <small className="muted">{when.format(new Date(payment.createdAt))}</small>
-                </span>
-                <strong>- {money(payment.amountCents)}</strong>
+                <button
+                  type="button"
+                  aria-label={`Ver comprovante: ${payment.description}`}
+                  onClick={() => {
+                    setError('')
+                    fetchReceipt(payment.id).then(setReceipt, (failure) => setError(messageOf(failure)))
+                  }}
+                >
+                  <span>
+                    {payment.description}
+                    <small className="muted">{when.format(new Date(payment.createdAt))}</small>
+                  </span>
+                  <strong>- {money(payment.amountCents)}</strong>
+                </button>
               </li>
             ))}
           </ul>
@@ -96,7 +103,7 @@ export function Pay() {
   )
 }
 
-function BoletoForm({ onPaid }: { onPaid: (payment: BillPayment) => void }) {
+function BoletoForm({ onPaid }: { onPaid: (payment: BillReceipt) => void }) {
   const { money } = usePrivacy()
   const [line, setLine] = useState('')
   const [found, setFound] = useState<BoletoInfo>()
@@ -192,7 +199,7 @@ function BoletoForm({ onPaid }: { onPaid: (payment: BillPayment) => void }) {
   )
 }
 
-function TopUpForm({ onDone }: { onDone: (payment: BillPayment) => void }) {
+function TopUpForm({ onDone }: { onDone: (payment: BillReceipt) => void }) {
   const { money } = usePrivacy()
   const [operators, setOperators] = useState<Operator[]>([])
   const [operator, setOperator] = useState<OperatorCode>('ONDA')

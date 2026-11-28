@@ -70,6 +70,32 @@ class BillFlowTest extends IntegrationTest {
     }
 
     @Test
+    void paymentGivesAReceiptOnlyTheOwnerCanSee() throws Exception {
+        JsonNode boleto = sample();
+        JsonNode receipt = body(pay(boleto.get("line").asString(), UUID.randomUUID().toString()));
+        assertThat(receipt.get("recipient").asString()).isEqualTo(boleto.get("beneficiary").asString());
+        assertThat(receipt.get("line").asString()).isEqualTo(boleto.get("line").asString());
+        assertThat(receipt.get("dueDate").asString()).isEqualTo(boleto.get("dueDate").asString());
+        assertThat(receipt.get("payerAccount").asString()).startsWith("Agência 0001, conta ");
+        assertThat(receipt.get("authentication").asString()).matches("([0-9A-F]{4}\\.){7}[0-9A-F]{4}");
+
+        String id = receipt.get("id").asString();
+        JsonNode again = body(api.read("/bills/" + id));
+        assertThat(again.get("authentication").asString()).as("o mesmo código toda vez")
+                .isEqualTo(receipt.get("authentication").asString());
+        assertThat(new ApiClient(mvc, newCustomer().bearer()).read("/bills/" + id).getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    void topUpReceiptNamesTheOperatorAndHidesThePhone() throws Exception {
+        JsonNode receipt = body(api.send("/bills/top-ups",
+                "{\"operator\":\"CORRENTE\",\"phone\":\"31991234567\",\"amountCents\":5000}", UUID.randomUUID().toString()));
+        assertThat(receipt.get("recipient").asString()).isEqualTo("Corrente Telecom");
+        assertThat(receipt.get("phone").asString()).isEqualTo("(31) •••••-4567");
+        assertThat(receipt.get("line").isNull()).isTrue();
+    }
+
+    @Test
     void anotherCustomerCannotPayAPaidBoleto() throws Exception {
         JsonNode boleto = sample();
         pay(boleto.get("line").asString(), UUID.randomUUID().toString());
