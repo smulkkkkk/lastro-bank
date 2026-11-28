@@ -1,6 +1,7 @@
 package dev.lastro.core.credit;
 
 import dev.lastro.core.credit.CreditService.InvoiceItem;
+import dev.lastro.core.credit.CreditService.Device;
 import dev.lastro.core.credit.CreditService.Mode;
 import dev.lastro.core.credit.CreditService.Overview;
 import dev.lastro.core.credit.CreditService.Purchase;
@@ -37,7 +38,7 @@ class CreditController {
     }
 
     record PurchaseRequest(@NotNull Merchant merchant, @NotNull @Positive @Max(MAX_CENTS) Long amountCents,
-            @NotNull Mode mode, @NotNull @Min(1) @Max(12) Integer installments, boolean contactless) {
+            @NotNull Mode mode, @NotNull @Min(1) @Max(12) Integer installments, boolean contactless, Device device) {
     }
 
     record PaymentRequest(@NotNull @Positive @Max(MAX_CENTS) Long amountCents) {
@@ -68,7 +69,7 @@ class CreditController {
     Purchase buy(@PathVariable UUID id, @RequestHeader("Idempotency-Key") @Pattern(regexp = KEY) String key,
             @Valid @RequestBody PurchaseRequest request, @AuthenticationPrincipal Jwt user) {
         return credit.buy(ownerId(user), id, request.merchant(), request.amountCents(), request.mode(),
-                request.installments(), request.contactless(), key);
+                request.installments(), request.contactless(), request.device(), key);
     }
 
     @GetMapping("/credit")

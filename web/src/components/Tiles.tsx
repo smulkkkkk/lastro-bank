@@ -18,7 +18,7 @@ export const TILES: Tile[] = [
   { to: '/app/investir', name: 'Investir', hint: 'Bitcoin, dólar e euro', icon: ICONS.invest },
   { to: '/app/credito', name: 'Crédito', hint: 'Fatura e limite', icon: ICONS.credit },
   { to: '/app/emprestimo', name: 'Empréstimo', hint: 'Simular e contratar', icon: 'M4 12h16M12 4v16M6 6l12 12' },
-  { to: '/app/extrato', name: 'Extrato', hint: 'Tudo que entrou e saiu', icon: ICONS.statement },
+  { to: '/app/bancos', name: 'Outros bancos', hint: 'Ver saldo e trazer dinheiro', icon: ICONS.banks },
   { to: '/app/pagar', name: 'Pagar', hint: 'Boleto e recarga de celular', icon: ICONS.bill },
   { to: '/app/bolhas', name: 'Bolhas', hint: 'Cashback e cupons nas lojas', icon: ICONS.bubbles },
 ]

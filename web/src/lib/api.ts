@@ -149,6 +149,8 @@ export interface Purchase {
   installments: number
   contactless: boolean
   createdAt: string
+  discountCents: number
+  device: 'CARD' | 'PHONE' | 'WATCH' | null
 }
 
 export interface Invoice {
@@ -497,6 +499,52 @@ export const claimCoupon = (merchant: string) =>
 export const redeemBubbles = (bubbles: number, idempotencyKey: string) =>
   call<BubbleWallet>('/rewards/redeem', withKey(idempotencyKey, { bubbles }))
 
+export type Permission = 'BALANCES' | 'TRANSACTIONS' | 'PAYMENTS'
+
+export interface ExternalBank {
+  code: string
+  name: string
+}
+
+export interface Consent {
+  id: string
+  bankCode: string
+  bankName: string
+  permissions: Permission[]
+  status: 'AWAITING' | 'AUTHORIZED' | 'REJECTED' | 'REVOKED' | 'EXPIRED'
+  months: number
+  createdAt: string
+  expiresAt: string | null
+  account: { branch: string; number: string; balanceCents: number | null } | null
+}
+
+export interface ExternalTransaction {
+  at: string
+  description: string
+  amountCents: number
+}
+
+export const fetchBanks = () => call<ExternalBank[]>('/open-finance/banks')
+
+export const fetchConsents = () => call<Consent[]>('/open-finance/consents')
+
+export const requestConsent = (bank: string, permissions: Permission[], months: number) =>
+  call<Consent>('/open-finance/consents', { method: 'POST', body: JSON.stringify({ bank, permissions, months }) })
+
+export const authorizeConsent = (id: string, approve: boolean) =>
+  call<Consent>(`/open-finance/consents/${id}/authorization`, { method: 'POST', body: JSON.stringify({ approve }) })
+
+export const revokeConsent = (id: string) => call<Consent>(`/open-finance/consents/${id}`, { method: 'DELETE' })
+
+export const fetchExternalTransactions = (id: string) =>
+  call<ExternalTransaction[]>(`/open-finance/consents/${id}/transactions`)
+
+export const bringMoney = (id: string, amountCents: number, idempotencyKey: string) =>
+  call<{ id: string; amountCents: number; remainingCents: number }>(
+    `/open-finance/consents/${id}/transfers`,
+    withKey(idempotencyKey, { amountCents }),
+  )
+
 export async function resumeSession(): Promise<boolean> {
   return hasHint() ? refresh() : false
 }
@@ -573,7 +621,7 @@ export const fetchPurchases = () => call<Purchase[]>('/purchases')
 
 export const buy = (
   cardId: string,
-  data: { merchant: string; amountCents: number; mode: 'DEBIT' | 'CREDIT'; installments: number; contactless: boolean },
+  data: { merchant: string; amountCents: number; mode: 'DEBIT' | 'CREDIT'; installments: number; contactless: boolean; device?: 'CARD' | 'PHONE' | 'WATCH' },
   idempotencyKey: string,
 ) => call<Purchase>(`/cards/${cardId}/purchases`, withKey(idempotencyKey, data))
 

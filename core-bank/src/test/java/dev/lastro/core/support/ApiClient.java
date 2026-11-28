@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 /** Atalhos de chamada autenticada para os testes. */
 public record ApiClient(MockMvc mvc, String bearer) {
@@ -23,5 +24,10 @@ public record ApiClient(MockMvc mvc, String bearer) {
         return mvc.perform(post("/api/v1" + path).header("Authorization", bearer)
                 .header("Idempotency-Key", idempotencyKey)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andReturn().getResponse();
+    }
+
+    public MockHttpServletResponse delete(String path) throws Exception {
+        return mvc.perform(MockMvcRequestBuilders.delete("/api/v1" + path).header("Authorization", bearer))
+                .andReturn().getResponse();
     }
 }

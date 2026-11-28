@@ -170,6 +170,9 @@ try {
     for (const [merchant, amountCents, mode, installments] of [['ANCORA', 129900, 'CREDIT', 6], ['FAROL', 8990, 'CREDIT', 1], ['ABISSAL', 4600, 'CREDIT', 1], ['MARE_CHEIA', 1850, 'DEBIT', 1]]) {
       await post('/cards/' + cards[0].id + '/purchases', { merchant, amountCents, mode, installments, contactless: mode === 'DEBIT' }, { ...auth, 'Idempotency-Key': crypto.randomUUID() })
     }
+    // Um banco conectado pelo Open Finance, já autorizado.
+    const consent = await post('/open-finance/consents', { bank: 'CORAL', permissions: ['BALANCES', 'TRANSACTIONS', 'PAYMENTS'], months: 12 }, auth)
+    await post('/open-finance/consents/' + consent.id + '/authorization', { approve: true }, auth)
     // Um cupom guardado, para a tela de bolhas mostrar como fica.
     await post('/rewards/stores/ABISSAL/coupon', {}, auth)
     const quote = await (await fetch('/api/v1/loans/quote?amountCents=150000&installments=12', { headers: auth })).json()
@@ -199,6 +202,7 @@ try {
       ['ajuda', '/app/ajuda', '.bubble'],
       ['pagar', '/app/pagar', '.segmented'],
       ['bolhas', '/app/bolhas', '.store'],
+      ['bancos', '/app/bancos', '.consent'],
     ]) {
       await open(path, ready)
       const name = `${format}-${screen}`
@@ -223,7 +227,7 @@ try {
 
   // O menor celular que o projeto promete atender.
   await viewport(360, 640, true)
-  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble'], ['/app/pagar', '.segmented'], ['/app/bolhas', '.store']]) {
+  for (const [path, ready] of [['/', '.wallet'], ['/app', '.ballast-path'], ['/app/pix', '.pix-contacts'], ['/app/caixinhas', '.tank'], ['/app/investir', '.assets'], ['/app/credito', '.invoice-items'], ['/app/emprestimo', '.installments'], ['/app/cartoes', '.wallet'], ['/app/conta', '.next'], ['/app/ajuda', '.bubble'], ['/app/pagar', '.segmented'], ['/app/bolhas', '.store'], ['/app/bancos', '.consent']]) {
     await open(path, ready)
     await checkWidth(`360px ${path}`)
   }

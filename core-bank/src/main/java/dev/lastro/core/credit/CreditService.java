@@ -31,8 +31,12 @@ class CreditService {
 
     enum Mode { DEBIT, CREDIT }
 
+    /** Com o que a compra foi aproximada. Celular e relógio usam um token próprio, não o cartão físico. */
+    enum Device { CARD, PHONE, WATCH }
+
     record Purchase(UUID id, UUID cardId, String kind, String mode, String merchant, String category,
-            long amountCents, int installments, boolean contactless, OffsetDateTime createdAt, long discountCents) {
+            long amountCents, int installments, boolean contactless, OffsetDateTime createdAt, long discountCents,
+            String device) {
     }
 
     record Invoice(LocalDate reference, LocalDate closesOn, LocalDate dueOn, String status, long totalCents,
@@ -54,7 +58,7 @@ class CreditService {
             rs.getObject("card_id", UUID.class), rs.getString("kind"), rs.getString("mode"),
             rs.getString("merchant"), rs.getString("category"), rs.getLong("amount_cents"),
             rs.getInt("installments"), rs.getBoolean("contactless"),
-            rs.getObject("created_at", OffsetDateTime.class), rs.getLong("discount_cents"));
+            rs.getObject("created_at", OffsetDateTime.class), rs.getLong("discount_cents"), rs.getString("device"));
 
     private final JdbcClient jdbc;
     private final LedgerService ledger;
@@ -103,7 +107,11 @@ class CreditService {
 
     @Transactional
     public Purchase buy(UUID ownerId, UUID cardId, Merchant merchant, long cents, Mode mode, int installments,
-            boolean contactless, String idempotencyKey) {
+            boolean contactless, Device requestedDevice, String idempotencyKey) {
+        if (requestedDevice != null && !contactless) {
+            throw ApiException.badRequest("purchase.device", "Aparelho só vale para compra por aproximação.");
+        }
+        String device = contactless ? (requestedDevice == null ? Device.CARD : requestedDevice).name() : null;
         UUID checking = accounts.checkingId(ownerId);
         UUID credit = accounts.creditId(ownerId);
         ledger.lock(List.of(checking, credit));
@@ -114,7 +122,7 @@ class CreditService {
             if (!cardId.equals(p.cardId()) || !p.merchant().equals(merchant.title())
                     || p.amountCents() + p.discountCents() != cents
                     || !p.mode().equals(mode.name()) || p.installments() != installments
-                    || p.contactless() != contactless) {
+                    || p.contactless() != contactless || !java.util.Objects.equals(p.device(), device)) {
                 throw mismatch();
             }
             return p;
@@ -128,7 +136,8 @@ class CreditService {
         if (card[0]) {
             throw ApiException.unprocessable("card.frozen", "Este cartão está bloqueado.");
         }
-        if (contactless && !card[1]) {
+        // A chave de aproximação do cartão vale para o plástico; celular e relógio têm token próprio.
+        if (Device.CARD.name().equals(device) && !card[1]) {
             throw ApiException.unprocessable("card.contactless_off", "A aproximação deste cartão está desligada.");
         }
         if (mode == Mode.DEBIT && installments != 1) {
@@ -150,6 +159,13 @@ class CreditService {
         coupon.ifPresent(used -> rewards.markUsed(used.id(), transactionId));
         Purchase purchase = save(ownerId, cardId, "PURCHASE", mode, merchant.title(), merchant.category(), charged,
                 discount, installments, contactless, idempotencyKey, transactionId);
+        if (device != null) {
+            jdbc.sql("UPDATE core.purchase SET device = :device WHERE id = :id").param("device", device)
+                    .param("id", purchase.id()).update();
+            purchase = new Purchase(purchase.id(), purchase.cardId(), purchase.kind(), purchase.mode(), purchase.merchant(),
+                    purchase.category(), purchase.amountCents(), purchase.installments(), purchase.contactless(),
+                    purchase.createdAt(), purchase.discountCents(), device);
+        }
         rewards.earn(ownerId, merchant.name(), charged, purchase.id(), merchant.title());
         return purchase;
     }

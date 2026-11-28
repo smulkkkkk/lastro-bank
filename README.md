@@ -83,6 +83,24 @@ Cada caixinha é um aquário que enche até a meta, e o Lino infla conforme voc�
 - Bolhas não são dinheiro até a troca: só então viram um lançamento no razão. Duas trocas ao mesmo
   tempo não gastam as mesmas bolhas, e o extrato de bolhas não aceita alteração nem no banco.
 
+## Outros bancos (Open Finance simulado)
+
+![Banco conectado pelo Open Finance](docs/images/pc-bancos.png)
+
+- O fluxo segue o do Open Finance: o cliente escolhe o banco, o que compartilhar (saldo, extrato,
+  trazer dinheiro) e por quanto tempo; autoriza numa tela que simula o outro banco; e pode revogar
+  quando quiser.
+- Fora de um consentimento ativo, nada da conta de lá aparece: revogado, recusado ou vencido some na hora.
+- Trazer dinheiro respeita o saldo de lá, mesmo com dois pedidos ao mesmo tempo, e aparece nos
+  dois extratos. Os bancos são fictícios.
+
+## Aproximação
+
+- Na compra simulada, dá para inserir o cartão ou aproximar o cartão, o celular ou o relógio, com a
+  animação do aparelho chegando na maquininha.
+- Desligar a aproximação do cartão bloqueia só o plástico: celular e relógio usam token próprio, como
+  nas carteiras digitais.
+
 ## Avisos ao vivo e atendimento
 
 ![Pix recebido aparecendo na hora](docs/images/pc-aviso.png)
@@ -193,7 +211,7 @@ A API sobe em `http://localhost:8080`.
 - [x] Antifraude em Go, com revisão por analista
 - [x] Avisos ao vivo, chat com IA e atendimento no WhatsApp
 - [x] Bolhas e descontos nas lojas parceiras
-- [ ] Outros bancos e aproximação simulada
+- [x] Outros bancos e aproximação simulada
 - [ ] Docker, CI e publicação
 
 O plano completo está em [produto](docs/superpowers/specs/2026-11-24-lastro-v2-produto.md) e na
